@@ -2548,18 +2548,11 @@ def add_biomass(n, costs):
         solid_biomass_potentials_spatial = biomass_potentials["solid biomass"].rename(
             index=lambda x: x + " solid biomass"
         )
-        msw_biomass_potentials_spatial = biomass_potentials[
-            "municipal solid waste"
-        ].rename(index=lambda x: x + " municipal solid waste")
         unsustainable_solid_biomass_potentials_spatial = biomass_potentials[
             "unsustainable solid biomass"
         ].rename(index=lambda x: x + " unsustainable solid biomass")
 
     else:
-        solid_biomass_potentials_spatial = biomass_potentials["solid biomass"].sum()
-        msw_biomass_potentials_spatial = biomass_potentials[
-            "municipal solid waste"
-        ].sum()
         unsustainable_solid_biomass_potentials_spatial = biomass_potentials[
             "unsustainable solid biomass"
         ].sum()
@@ -2589,6 +2582,16 @@ def add_biomass(n, costs):
         options["municipal_solid_waste"] = False
 
     if options["municipal_solid_waste"]:
+
+        if options.get("biomass_spatial", options["biomass_transport"]):
+            msw_biomass_potentials_spatial = biomass_potentials[
+                "municipal solid waste"
+            ].rename(index=lambda x: x + " municipal solid waste")
+        else:
+            solid_biomass_potentials_spatial = biomass_potentials["solid biomass"].sum()
+            msw_biomass_potentials_spatial = biomass_potentials[
+                "municipal solid waste"
+            ].sum()
 
         n.add("Carrier", "municipal solid waste")
 
