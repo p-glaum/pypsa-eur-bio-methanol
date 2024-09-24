@@ -167,6 +167,8 @@ def define_spatial(nodes, options):
         spatial.methanol.shipping = ["EU shipping methanol"]
         spatial.methanol.industry = ["EU industry methanol"]
 
+    spatial.methanol.df = pd.DataFrame(vars(spatial.methanol), index=nodes)
+
     # oil
     spatial.oil = SimpleNamespace()
 
@@ -1111,7 +1113,10 @@ def add_generation(n, costs):
 
     nodes = pop_layout.index
 
-    conventionals = options["conventional_generation"]
+    conventionals = options.get("conventional_generation", None)
+
+    if not conventionals:
+        return
 
     for generator, carrier in conventionals.items():
         carrier_nodes = vars(spatial)[carrier].nodes
@@ -1661,7 +1666,10 @@ def add_storage_and_grids(n, costs):
         lifetime=costs.at["battery inverter", "lifetime"],
     )
 
-    if options["methanation"]:
+    if (
+        options["methanation"]
+        and not options["methanol"]["replace_gas_demand_with_methanol"]
+    ):
         n.madd(
             "Link",
             spatial.nodes,
@@ -1704,7 +1712,10 @@ def add_storage_and_grids(n, costs):
             lifetime=costs.at["coal", "lifetime"],
         )
 
-    if options["SMR_cc"]:
+    if (
+        options["SMR_cc"]
+        and not options["methanol"]["replace_gas_demand_with_methanol"]
+    ):
         n.madd(
             "Link",
             spatial.nodes,
@@ -1722,7 +1733,7 @@ def add_storage_and_grids(n, costs):
             lifetime=costs.at["SMR CC", "lifetime"],
         )
 
-    if options["SMR"]:
+    if options["SMR"] and not options["methanol"]["replace_gas_demand_with_methanol"]:
         n.madd(
             "Link",
             nodes + " SMR",
@@ -2294,12 +2305,14 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 ],
             )
 
-        if options["chp"] and heat_system == HeatSystem.URBAN_CENTRAL:
+        if options["chp"]["enable"] and heat_system == HeatSystem.URBAN_CENTRAL:
             # add gas CHP; biomass CHP is added in biomass section
+            fuel_type = options["chp"]["fuel_type"]
+            fuel_nodes = eval(f"spatial.{fuel_type}.df")
             n.madd(
                 "Link",
-                nodes + " urban central gas CHP",
-                bus0=spatial.gas.df.loc[nodes, "nodes"].values,
+                nodes + f" urban central {fuel_type} CHP",
+                bus0=fuel_nodes.loc[nodes, "nodes"].values,
                 bus1=nodes,
                 bus2=nodes + " urban central heat",
                 bus3="co2 atmosphere",
@@ -2311,14 +2324,14 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 efficiency=costs.at["central gas CHP", "efficiency"],
                 efficiency2=costs.at["central gas CHP", "efficiency"]
                 / costs.at["central gas CHP", "c_b"],
-                efficiency3=costs.at["gas", "CO2 intensity"],
+                efficiency3=costs.at[fuel_type, "CO2 intensity"],
                 lifetime=costs.at["central gas CHP", "lifetime"],
             )
 
             n.madd(
                 "Link",
                 nodes + " urban central gas CHP CC",
-                bus0=spatial.gas.df.loc[nodes, "nodes"].values,
+                bus0=fuel_nodes.loc[nodes, "nodes"].values,
                 bus1=nodes,
                 bus2=nodes + " urban central heat",
                 bus3="co2 atmosphere",
@@ -2338,22 +2351,22 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 ),
                 efficiency2=costs.at["central gas CHP", "efficiency"]
                 / costs.at["central gas CHP", "c_b"]
-                + costs.at["gas", "CO2 intensity"]
+                + costs.at[fuel_type, "CO2 intensity"]
                 * (
                     costs.at["biomass CHP capture", "heat-output"]
                     + costs.at["biomass CHP capture", "compression-heat-output"]
                     - costs.at["biomass CHP capture", "heat-input"]
                 ),
-                efficiency3=costs.at["gas", "CO2 intensity"]
+                efficiency3=costs.at[fuel_type, "CO2 intensity"]
                 * (1 - costs.at["biomass CHP capture", "capture_rate"]),
-                efficiency4=costs.at["gas", "CO2 intensity"]
+                efficiency4=costs.at[fuel_type, "CO2 intensity"]
                 * costs.at["biomass CHP capture", "capture_rate"],
                 lifetime=costs.at["central gas CHP", "lifetime"],
             )
 
         if (
             options["chp"]
-            and options["micro_chp"]
+            and options["micro_chp"]["enable"]
             and heat_system.value != "urban central"
         ):
             n.madd(
@@ -2778,8 +2791,26 @@ def add_biomass(n, costs):
         p_nom_extendable=True,
         lifetime=costs.at["biogas", "lifetime"],
     )
+    if not options["methanol"]["replace_gas_demand_with_methanol"]:
+        n.madd(
+            "Link",
+            spatial.gas.biogas_to_gas,
+            bus0=spatial.gas.biogas,
+            bus1=spatial.gas.nodes,
+            bus2="co2 atmosphere",
+            carrier="biogas to gas",
+            capital_cost=costs.at["biogas", "fixed"]
+            + costs.at["biogas upgrading", "fixed"],
+            marginal_cost=costs.at["biogas upgrading", "VOM"],
+            efficiency=costs.at["biogas", "efficiency"],
+            efficiency2=-costs.at["gas", "CO2 intensity"],
+            p_nom_extendable=True,
+        )
 
-    if options["biogas_upgrading_cc"]:
+    if (
+        options["biogas_upgrading_cc"]
+        and not options["methanol"]["replace_gas_demand_with_methanol"]
+    ):
         # Assuming for costs that the CO2 from upgrading is pure, such as in amine scrubbing. I.e., with and without CC is
         # equivalent. Adding biomass CHP capture because biogas is often small-scale and decentral so further
         # from e.g. CO2 grid or buyers. This is a proxy for the added cost for e.g. a raw biogas pipeline to a central upgrading facility
@@ -3090,7 +3121,10 @@ def add_biomass(n, costs):
         )
 
     # BioSNG from solid biomass
-    if options["biosng"]:
+    if (
+        options["biosng"]
+        and not options["methanol"]["replace_gas_demand_with_methanol"]
+    ):
         n.madd(
             "Link",
             spatial.biomass.nodes,
@@ -3109,7 +3143,10 @@ def add_biomass(n, costs):
         )
 
     # BioSNG from solid biomass with carbon capture
-    if options["biosng_cc"]:
+    if (
+        options["biosng_cc"]
+        and not options["methanol"]["replace_gas_demand_with_methanol"]
+    ):
         # Assuming that acid gas removal (incl. CO2) from syngas i performed with Rectisol
         # process (Methanol) and that electricity demand for this is included in the base process
         n.madd(
@@ -3181,6 +3218,8 @@ def add_industry(n, costs):
         pd.read_csv(snakemake.input.industrial_demand, index_col=0) * 1e6
     ) * nyears
 
+    # add biomass for industry
+
     n.madd(
         "Bus",
         spatial.biomass.industry,
@@ -3241,69 +3280,6 @@ def add_industry(n, costs):
         lifetime=costs.at["cement capture", "lifetime"],
     )
 
-    n.madd(
-        "Bus",
-        spatial.gas.industry,
-        location=spatial.gas.locations,
-        carrier="gas for industry",
-        unit="MWh_LHV",
-    )
-
-    gas_demand = industrial_demand.loc[nodes, "methane"] / nhours
-
-    if options["gas_network"]:
-        spatial_gas_demand = gas_demand.rename(index=lambda x: x + " gas for industry")
-    else:
-        spatial_gas_demand = gas_demand.sum()
-
-    n.madd(
-        "Load",
-        spatial.gas.industry,
-        bus=spatial.gas.industry,
-        carrier="gas for industry",
-        p_set=spatial_gas_demand,
-    )
-
-    n.madd(
-        "Link",
-        spatial.gas.industry,
-        bus0=spatial.gas.nodes,
-        bus1=spatial.gas.industry,
-        bus2="co2 atmosphere",
-        carrier="gas for industry",
-        p_nom_extendable=True,
-        efficiency=1.0,
-        efficiency2=costs.at["gas", "CO2 intensity"],
-    )
-
-    n.madd(
-        "Link",
-        spatial.gas.industry_cc,
-        bus0=spatial.gas.nodes,
-        bus1=spatial.gas.industry,
-        bus2="co2 atmosphere",
-        bus3=spatial.co2.nodes,
-        carrier="gas for industry CC",
-        p_nom_extendable=True,
-        capital_cost=costs.at["cement capture", "fixed"]
-        * costs.at["gas", "CO2 intensity"],
-        efficiency=0.9,
-        efficiency2=costs.at["gas", "CO2 intensity"]
-        * (1 - costs.at["cement capture", "capture_rate"]),
-        efficiency3=costs.at["gas", "CO2 intensity"]
-        * costs.at["cement capture", "capture_rate"],
-        lifetime=costs.at["cement capture", "lifetime"],
-    )
-
-    n.madd(
-        "Load",
-        nodes,
-        suffix=" H2 for industry",
-        bus=nodes + " H2",
-        carrier="H2 for industry",
-        p_set=industrial_demand.loc[nodes, "hydrogen"] / nhours,
-    )
-
     # methanol for industry
 
     n.madd(
@@ -3360,6 +3336,88 @@ def add_industry(n, costs):
         efficiency=options["MWh_MeOH_per_MWh_H2"],
         efficiency2=-options["MWh_MeOH_per_MWh_H2"] / options["MWh_MeOH_per_MWh_e"],
         efficiency3=-options["MWh_MeOH_per_MWh_H2"] / options["MWh_MeOH_per_tCO2"],
+    )
+
+    # gas for industry
+
+    gas_demand = industrial_demand.loc[nodes, "methane"] / nhours
+
+    if not options["methanol"]["replace_gas_demand_with_methanol"]:
+        n.madd(
+            "Bus",
+            spatial.gas.industry,
+            location=spatial.gas.locations,
+            carrier="gas for industry",
+            unit="MWh_LHV",
+        )
+
+        if options["gas_network"]:
+            spatial_gas_demand = gas_demand.rename(
+                index=lambda x: x + " gas for industry"
+            )
+        else:
+            spatial_gas_demand = gas_demand.sum()
+
+        n.madd(
+            "Load",
+            spatial.gas.industry,
+            bus=spatial.gas.industry,
+            carrier="gas for industry",
+            p_set=spatial_gas_demand,
+        )
+
+        n.madd(
+            "Link",
+            spatial.gas.industry,
+            bus0=spatial.gas.nodes,
+            bus1=spatial.gas.industry,
+            bus2="co2 atmosphere",
+            carrier="gas for industry",
+            p_nom_extendable=True,
+            efficiency=1.0,
+            efficiency2=costs.at["gas", "CO2 intensity"],
+        )
+
+        n.madd(
+            "Link",
+            spatial.gas.industry_cc,
+            bus0=spatial.gas.nodes,
+            bus1=spatial.gas.industry,
+            bus2="co2 atmosphere",
+            bus3=spatial.co2.nodes,
+            carrier="gas for industry CC",
+            p_nom_extendable=True,
+            capital_cost=costs.at["cement capture", "fixed"]
+            * costs.at["gas", "CO2 intensity"],
+            efficiency=0.9,
+            efficiency2=costs.at["gas", "CO2 intensity"]
+            * (1 - costs.at["cement capture", "capture_rate"]),
+            efficiency3=costs.at["gas", "CO2 intensity"]
+            * costs.at["cement capture", "capture_rate"],
+            lifetime=costs.at["cement capture", "lifetime"],
+        )
+    else:
+        p_set_methanol = gas_demand.rename(lambda x: x + " industry methanol")
+
+        if not options["methanol"]["regional_methanol_demand"]:
+            p_set_methanol = p_set_methanol.sum()
+
+        n.madd(
+            "Load",
+            spatial.methanol.industry,
+            suffix="(gas)",
+            bus=spatial.methanol.industry,
+            carrier="industry methanol",
+            p_set=p_set_methanol,
+        )
+
+    n.madd(
+        "Load",
+        nodes,
+        suffix=" H2 for industry",
+        bus=nodes + " H2",
+        carrier="H2 for industry",
+        p_set=industrial_demand.loc[nodes, "hydrogen"] / nhours,
     )
 
     shipping_hydrogen_share = get(options["shipping_hydrogen_share"], investment_year)
@@ -4538,10 +4596,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="38",
+            clusters="39",
             ll="vopt",
             sector_opts="",
-            planning_horizons="2030",
+            planning_horizons="2050",
+            run="no_gas_no_fossil",
         )
 
     configure_logging(snakemake)

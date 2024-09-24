@@ -346,6 +346,7 @@ if __name__ == "__main__":
             "build_biomass_potentials",
             clusters="39",
             planning_horizons=2050,
+            run="with_fossil",
         )
 
     configure_logging(snakemake)

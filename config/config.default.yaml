@@ -596,8 +596,12 @@ sector:
   overdimension_heat_generators:
     decentral: 1.1  #to cover demand peaks bigger than data
     central: 1.0
-  chp: true
-  micro_chp: false
+  chp:
+    enable: true
+    fuel_type: gas
+  micro_chp:
+    enable: false
+    fuel_type: gas
   solar_thermal: true
   solar_cf_correction: 0.788457  # =  >>> 1/1.2683
   marginal_cost_storage: 0. #1e-4
@@ -655,6 +659,7 @@ sector:
       allam: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
+    replace_gas_demand_with_methanol: true
   ammonia: false
   min_part_load_fischer_tropsch: 0.5
   min_part_load_methanolisation: 0.3
