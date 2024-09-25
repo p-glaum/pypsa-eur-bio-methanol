@@ -3760,6 +3760,72 @@ def add_industry(n, costs):
             efficiency3=process_co2_per_naphtha,
         )
 
+    if options["methanol"].get("methanol_to_olefins", False):
+
+        logger.info("Adding methanol to olefins")
+        tech = "methanol-to-olefins/aromatics"
+
+        naphtha_per_t_hvc = 12.622  # MWh per tonne of HVC (taken from sector ratios)
+
+        # set to not allow industry reallocation
+        p_nom = industrial_demand.loc[nodes, "naphtha"] / naphtha_per_t_hvc / nhours
+
+        process_emissions = (
+            costs.at[tech, "carbondioxide-output"] / costs.at[tech, "methanol-input"]
+        )
+
+        if not (cf_industry["waste_to_energy"] or cf_industry["waste_to_energy_cc"]):
+            n.madd(
+                "Link",
+                nodes,
+                suffix=f" {tech}",
+                carrier=tech,
+                p_nom=p_nom,
+                p_nom_extendable=True,
+                bus0=spatial.methanol.nodes,
+                bus1=spatial.oil.naphtha,
+                bus2=nodes,
+                bus3=spatial.co2.process_emissions,
+                bus4="co2 atmosphere",
+                efficiency=1
+                / costs.at[tech, "methanol-input"]
+                * naphtha_per_t_hvc,  # because MtO produces HVC not naphta
+                efficiency2=-costs.at[tech, "electricity-input"]
+                / costs.at[tech, "methanol-input"],
+                efficiency3=process_emissions,
+                efficiency4=(
+                    costs.at["methanolisation", "carbondioxide-input"]
+                    - process_emissions
+                )
+                * non_sequestered,
+            )
+        else:
+            n.madd(
+                "Link",
+                nodes,
+                suffix=f" {tech}",
+                carrier=tech,
+                p_nom=p_nom,
+                p_nom_extendable=True,
+                bus0=spatial.methanol.nodes,
+                bus1=spatial.oil.naphtha,
+                bus2=nodes,
+                bus3=spatial.co2.process_emissions,
+                bus4=non_sequestered_hvc_locations,
+                efficiency=1
+                / costs.at[tech, "methanol-input"]
+                * naphtha_per_t_hvc,  # because MtO produces HVC not naphta
+                efficiency2=-costs.at[tech, "electricity-input"]
+                / costs.at[tech, "methanol-input"],
+                efficiency3=process_emissions,
+                efficiency4=(
+                    costs.at["methanolisation", "carbondioxide-input"]
+                    - process_emissions
+                )
+                * non_sequestered
+                / costs.at["oil", "CO2 intensity"],  # MWh_oil/Mwh_meoh
+            )
+
     # aviation
     demand_factor = options["aviation_demand_factor"]
     if demand_factor != 1:
