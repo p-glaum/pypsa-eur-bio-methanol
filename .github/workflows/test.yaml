@@ -94,7 +94,7 @@ jobs:
 
     - name: Upload artifacts
       if: matrix.os == 'ubuntu' && matrix.inhouse == 'stable-inhouse-deps'
-      uses: actions/upload-artifact@v4.4.0
+      uses: actions/upload-artifact@v4.4.1
       with:
         name: resources-results
         path: |
