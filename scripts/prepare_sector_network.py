@@ -2776,21 +2776,6 @@ def add_biomass(n, costs):
             marginal_cost=costs.at["BtL", "VOM"],
         )
 
-    n.madd(
-        "Link",
-        spatial.gas.biogas_to_gas,
-        bus0=spatial.gas.biogas,
-        bus1=spatial.gas.nodes,
-        bus2="co2 atmosphere",
-        carrier="biogas to gas",
-        capital_cost=costs.at["biogas", "fixed"]
-        + costs.at["biogas upgrading", "fixed"],
-        marginal_cost=costs.at["biogas upgrading", "VOM"],
-        efficiency=costs.at["biogas", "efficiency"],
-        efficiency2=-costs.at["gas", "CO2 intensity"],
-        p_nom_extendable=True,
-        lifetime=costs.at["biogas", "lifetime"],
-    )
     if not options["methanol"]["replace_gas_demand_with_methanol"]:
         n.madd(
             "Link",
@@ -2805,6 +2790,7 @@ def add_biomass(n, costs):
             efficiency=costs.at["biogas", "efficiency"],
             efficiency2=-costs.at["gas", "CO2 intensity"],
             p_nom_extendable=True,
+            lifetime=costs.at["biogas", "lifetime"],
         )
 
     if (
