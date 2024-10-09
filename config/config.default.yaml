@@ -655,6 +655,7 @@ sector:
       allam: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
+    biogas-to-methanol: false
   ammonia: false
   min_part_load_fischer_tropsch: 0.5
   min_part_load_methanolisation: 0.3
@@ -1283,6 +1284,7 @@ plotting:
     methanolisation: '#00FFBF'
     biomass-to-methanol: '#EAD28A'
     biomass-to-methanol CC: '#EADBAD'
+    biogas-to-methanol: '#EAD28A'
     allam methanol: '#B98F76'
     CCGT methanol: '#B98F76'
     CCGT methanol CC: '#B98F76'

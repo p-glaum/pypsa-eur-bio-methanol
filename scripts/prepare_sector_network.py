@@ -2804,6 +2804,30 @@ def add_biomass(n, costs):
             lifetime=costs.at["biogas CC", "lifetime"],
         )
 
+    if options["methanol"]["biogas-to-methanol"]:
+        n.madd(
+            "Link",
+            spatial.nodes + " biogas to methanol",
+            bus0=spatial.gas.biogas,
+            bus1=spatial.methanol.nodes,
+            bus2=spatial.nodes,
+            bus3="co2 atmosphere",
+            efficiency=1
+            / 0.78,  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
+            efficiency2=-1 / 0.76,
+            efficiency3=-0.93
+            * costs.at[
+                "methanolisation", "carbondioxide-input"
+            ],  # carbon efficiency from paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
+            capital_cost=costs.at["biogas", "fixed"]
+            + 1 / 0.78 * costs.at["methanolisation", "fixed"]
+            + 1
+            / 0.76
+            * costs.at[
+                "electrolysis", "fixed"
+            ],  # rough cost estimatioin from adding up technology cost
+        )
+
     if options["biomass_transport"]:
         # add biomass transport
         transport_costs = pd.read_csv(
