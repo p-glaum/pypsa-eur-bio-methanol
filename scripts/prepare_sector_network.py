@@ -2804,7 +2804,7 @@ def add_biomass(n, costs):
             lifetime=costs.at["biogas CC", "lifetime"],
         )
 
-    if options["methanol"]["biogas-to-methanol"]:
+    if options["methanol"]["biogas_to_methanol"]:
         n.madd(
             "Link",
             spatial.nodes + " biogas to methanol",
@@ -2819,6 +2819,7 @@ def add_biomass(n, costs):
             * costs.at[
                 "methanolisation", "carbondioxide-input"
             ],  # carbon efficiency from paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
+            carrier="biogas-to-methanol",
             capital_cost=costs.at["biogas", "fixed"]
             + 1 / 0.78 * costs.at["methanolisation", "fixed"]
             + 1
