@@ -116,7 +116,10 @@ def define_spatial(nodes, options):
     else:
         spatial.gas.nodes = ["EU gas"]
         spatial.gas.locations = ["EU"]
-        spatial.gas.biogas = ["EU biogas"]
+        if options["methanol"]["biogas_to_methanol"]:
+            spatial.gas.biogas = nodes + " biogas"
+        else:
+            spatial.gas.biogas = ["EU biogas"]
         spatial.gas.industry = ["gas for industry"]
         spatial.gas.biogas_to_gas = ["EU biogas to gas"]
         if options.get("biomass_spatial", options["biomass_transport"]):
@@ -2814,7 +2817,7 @@ def add_biomass(n, costs):
             bus3="co2 atmosphere",
             efficiency=1
             / 0.78,  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
-            efficiency2=-1 / 0.76,
+            efficiency2=-0.76 * 1 / 0.78,  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
             efficiency3=-0.93
             * costs.at[
                 "methanolisation", "carbondioxide-input"
@@ -2822,11 +2825,13 @@ def add_biomass(n, costs):
             carrier="biogas-to-methanol",
             capital_cost=costs.at["biogas", "fixed"]
             + 1 / 0.78 * costs.at["methanolisation", "fixed"]
-            + 1
-            / 0.76
+            + 0.76
+            * 1
+            / 0.78
             * costs.at[
                 "electrolysis", "fixed"
-            ],  # rough cost estimatioin from adding up technology cost
+            ],  # rough cost estimation from adding up technology cost
+            p_nom_extendable=True,
         )
 
     if options["biomass_transport"]:
