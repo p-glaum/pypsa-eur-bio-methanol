@@ -111,8 +111,6 @@ def define_spatial(nodes, options):
         spatial.gas.biogas = nodes + " biogas"
         spatial.gas.industry = nodes + " gas for industry"
         spatial.gas.industry_cc = nodes + " gas for industry CC"
-        spatial.gas.biogas_to_gas = nodes + " biogas to gas"
-        spatial.gas.biogas_to_gas_cc = nodes + " biogas to gas CC"
     else:
         spatial.gas.nodes = ["EU gas"]
         spatial.gas.locations = ["EU"]
@@ -121,11 +119,6 @@ def define_spatial(nodes, options):
         else:
             spatial.gas.biogas = ["EU biogas"]
         spatial.gas.industry = ["gas for industry"]
-        spatial.gas.biogas_to_gas = ["EU biogas to gas"]
-        if options.get("biomass_spatial", options["biomass_transport"]):
-            spatial.gas.biogas_to_gas_cc = nodes + " biogas to gas CC"
-        else:
-            spatial.gas.biogas_to_gas_cc = ["EU biogas to gas CC"]
         if options.get("co2_spatial", options["co2network"]):
             spatial.gas.industry_cc = nodes + " gas for industry CC"
         else:
@@ -2534,7 +2527,7 @@ def add_biomass(n, costs):
     biomass_potentials = pd.read_csv(snakemake.input.biomass_potentials, index_col=0)
 
     # need to aggregate potentials if gas not nodally resolved
-    if options["gas_network"] or options["methanol"]["biogas_to_methanol"]:
+    if len(spatial.gas.biogas) > 1:
         biogas_potentials_spatial = biomass_potentials["biogas"].rename(
             index=lambda x: x + " biogas"
         )
@@ -2782,7 +2775,8 @@ def add_biomass(n, costs):
     if not options["methanol"]["replace_gas_demand_with_methanol"]:
         n.madd(
             "Link",
-            spatial.gas.biogas_to_gas,
+            spatial.gas.biogas,
+            suffix=" to gas",
             bus0=spatial.gas.biogas,
             bus1=spatial.gas.nodes,
             bus2="co2 atmosphere",
@@ -2805,7 +2799,8 @@ def add_biomass(n, costs):
         # from e.g. CO2 grid or buyers. This is a proxy for the added cost for e.g. a raw biogas pipeline to a central upgrading facility
         n.madd(
             "Link",
-            spatial.gas.biogas_to_gas_cc,
+            spatial.gas.biogas,
+            suffix=" to gas CC",
             bus0=spatial.gas.biogas,
             bus1=spatial.gas.nodes,
             bus2=spatial.co2.nodes,
