@@ -3079,11 +3079,13 @@ def add_biomass(n, costs):
             capital_cost=costs.at["BtL", "fixed"] * costs.at["BtL", "efficiency"]
             + efuel_scale_factor
             * costs.at["Fischer-Tropsch", "fixed"]
-            * costs.at["Fischer-Tropsch", "efficiency"],
+            * 1
+            / costs.at["Fischer-Tropsch", "hydrogen-input"],
             marginal_cost=costs.at["BtL", "VOM"] * costs.at["BtL", "efficiency"]
             + efuel_scale_factor
             * costs.at["Fischer-Tropsch", "VOM"]
-            * costs.at["Fischer-Tropsch", "efficiency"],
+            * 1
+            / costs.at["Fischer-Tropsch", "hydrogen-input"],
         )
 
     # BioSNG from solid biomass
@@ -3536,13 +3538,16 @@ def add_industry(n, costs):
         bus1=spatial.oil.nodes,
         bus2=spatial.co2.nodes,
         carrier="Fischer-Tropsch",
-        efficiency=costs.at["Fischer-Tropsch", "efficiency"],
+        efficiency=1 / costs.at["Fischer-Tropsch", "hydrogen-input"],
         capital_cost=costs.at["Fischer-Tropsch", "fixed"]
-        * costs.at["Fischer-Tropsch", "efficiency"],  # EUR/MW_H2/a
-        marginal_cost=costs.at["Fischer-Tropsch", "efficiency"]
+        * 1
+        / costs.at["Fischer-Tropsch", "hydrogen-input"],  # EUR/MW_H2/a
+        marginal_cost=1
+        / costs.at["Fischer-Tropsch", "hydrogen-input"]
         * costs.at["Fischer-Tropsch", "VOM"],
         efficiency2=-costs.at["oil", "CO2 intensity"]
-        * costs.at["Fischer-Tropsch", "efficiency"],
+        * 1
+        / costs.at["Fischer-Tropsch", "hydrogen-input"],
         p_nom_extendable=True,
         p_min_pu=options["min_part_load_fischer_tropsch"],
         lifetime=costs.at["Fischer-Tropsch", "lifetime"],
