@@ -941,7 +941,9 @@ def add_methanol_to_kerosene(n, costs):
         suffix=f" {tech}",
         carrier=tech,
         capital_cost=capital_cost,
-        marginal_cost=costs.at[tech, "VOM"],
+        marginal_cost=costs.at[tech, "VOM"]
+        / 1000
+        / costs.at[tech, "methanol-input"],  # TODO: change unit of VOM to EUR/MWh
         bus0=spatial.methanol.nodes,
         bus1=spatial.oil.kerosene,
         bus2=spatial.h2.nodes,
@@ -3776,10 +3778,13 @@ def add_industry(n, costs):
             )
 
     else:
-
+        if len(spatial.oil.nodes) > 1 or len(spatial.co2.nodes) > 1:
+            link_names = nodes + " naptha for industry"
+        else:
+            link_names = spatial.oil.naphtha
         n.madd(
             "Link",
-            spatial.oil.naphtha,
+            link_names,
             bus0=spatial.oil.nodes,
             bus1=spatial.oil.naphtha,
             bus2="co2 atmosphere",
