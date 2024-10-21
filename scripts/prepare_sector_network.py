@@ -970,17 +970,18 @@ def add_methanol_to_gasoline(n, costs):
         suffix=f" {tech}",
         carrier=tech,
         capital_cost=capital_cost,
-        marginal_cost=costs.at[tech_data, "VOM"] / costs.at[tech, "methanol-input"],
+        marginal_cost=costs.at[tech_data, "VOM"]
+        / costs.at[tech_data, "methanol-input"],
         bus0=spatial.methanol.nodes,
         bus1=spatial.oil.agriculture_machinery,
         bus2=spatial.h2.nodes,
         bus3="co2 atmosphere",
-        efficiency=1 / costs.at[tech, "methanol-input"],
-        efficiency2=-costs.at[tech, "hydrogen-input"]
-        / costs.at[tech, "methanol-input"],
+        efficiency=1 / costs.at[tech_data, "methanol-input"],
+        efficiency2=-costs.at[tech_data, "hydrogen-input"]
+        / costs.at[tech_data, "methanol-input"],
         efficiency3=costs.at["methanolisation", "carbondioxide-input"],
         p_nom_extendable=True,
-        lifetime=costs.at[tech, "lifetime"],
+        lifetime=costs.at[tech_data, "lifetime"],
     )
 
 
