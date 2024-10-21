@@ -3665,6 +3665,10 @@ def add_industry(n, costs):
         industrial_demand.loc[nodes, "process emission from feedstock"].sum()
         / industrial_demand.loc[nodes, "naphtha"].sum()
     )
+    efficiency = (
+        1 - 0.68 * 0.18
+    )  # guesstimate for energy demand for cracking of oils with higher C number than naphtha
+
     emitted_co2_per_naphtha = costs.at["oil", "CO2 intensity"] - process_co2_per_naphtha
 
     non_sequestered = 1 - get(
@@ -3695,6 +3699,7 @@ def add_industry(n, costs):
             bus3=spatial.co2.process_emissions,
             carrier="naphtha for industry",
             p_nom_extendable=True,
+            efficiency=efficiency,
             efficiency2=non_sequestered
             * emitted_co2_per_naphtha
             / costs.at["oil", "CO2 intensity"],
@@ -3791,6 +3796,7 @@ def add_industry(n, costs):
             bus3=spatial.co2.process_emissions,
             carrier="naphtha for industry",
             p_nom_extendable=True,
+            efficiency=efficiency,
             efficiency2=emitted_co2_per_naphtha * non_sequestered,
             efficiency3=process_co2_per_naphtha,
         )
@@ -3894,6 +3900,10 @@ def add_industry(n, costs):
         p_set=p_set,
     )
 
+    efficiency = (
+        1 - 0.25 * 0.18
+    )  # guesstimate for energy demand for cracking of oils with higher C number than kerosene
+
     n.madd(
         "Link",
         spatial.oil.kerosene,
@@ -3902,6 +3912,7 @@ def add_industry(n, costs):
         bus2="co2 atmosphere",
         carrier="kerosene for aviation",
         p_nom_extendable=True,
+        efficiency=efficiency,
         efficiency2=costs.at["oil", "CO2 intensity"],
     )
 
