@@ -652,6 +652,7 @@ sector:
     methanol_reforming: false
     methanol_reforming_cc: false
     methanol_to_kerosene: false
+    methanol_to_gasoline: false
     methanol_to_olefins: false
     methanol_to_power:
       ccgt: false
@@ -1285,6 +1286,7 @@ plotting:
     kerosene for aviation: '#a1ffe6'
     naphtha for industry: '#57ebc4'
     methanol-to-kerosene: '#C98468'
+    methanol-to-gasoline: '#afafaf'
     methanol-to-olefins/aromatics: '#FFA07A'
     Methanol steam reforming: '#FFBF00'
     Methanol steam reforming CC: '#A2EA8A'
