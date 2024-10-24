@@ -2944,7 +2944,7 @@ def add_biomass(n, costs):
             "Generator",
             spatial.biomass.nodes,
             bus=spatial.biomass.nodes,
-            carrier="solid biomass",
+            carrier="solid biomass transport",
             p_nom=10000,
             marginal_cost=costs.at["solid biomass", "fuel"]
             + bus_transport_costs * average_distance,
