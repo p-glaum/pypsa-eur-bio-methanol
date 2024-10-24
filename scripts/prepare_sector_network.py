@@ -947,7 +947,36 @@ def add_methanol_to_kerosene(n, costs):
         efficiency=1 / costs.at[tech, "methanol-input"],
         efficiency2=-costs.at[tech, "hydrogen-input"]
         / costs.at[tech, "methanol-input"],
-        efficiency3=costs.at["oil", "CO2 intensity"] / costs.at[tech, "methanol-input"],
+        efficiency3=costs.at["methanolisation", "carbondioxide-input"],
+        p_nom_extendable=True,
+        lifetime=costs.at[tech, "lifetime"],
+    )
+
+
+def add_methanol_to_gasoline(n, costs):
+    tech = "methanol-to-gasoline"
+
+    tech_data = "methanol-to-kerosene"  # since techno-economic data almost the same as MtK, just use the same data
+
+    logger.info(f"Adding {tech}.")
+
+    capital_cost = costs.at[tech_data, "fixed"] / costs.at[tech_data, "methanol-input"]
+
+    n.madd(
+        "Link",
+        spatial.h2.locations,
+        suffix=f" {tech}",
+        carrier=tech,
+        capital_cost=capital_cost,
+        marginal_cost=costs.at[tech_data, "VOM"] / costs.at[tech, "methanol-input"],
+        bus0=spatial.methanol.nodes,
+        bus1=spatial.oil.agriculture_machinery,
+        bus2=spatial.h2.nodes,
+        bus3="co2 atmosphere",
+        efficiency=1 / costs.at[tech, "methanol-input"],
+        efficiency2=-costs.at[tech, "hydrogen-input"]
+        / costs.at[tech, "methanol-input"],
+        efficiency3=costs.at["methanolisation", "carbondioxide-input"],
         p_nom_extendable=True,
         lifetime=costs.at[tech, "lifetime"],
     )
@@ -4124,6 +4153,9 @@ def add_agriculture(n, costs):
             p_nom_extendable=True,
             efficiency2=costs.at["oil", "CO2 intensity"],
         )
+
+        if options["methanol"]["methanol_to_gasoline"]:
+            add_methanol_to_gasoline(n, costs)
 
 
 def decentral(n):
