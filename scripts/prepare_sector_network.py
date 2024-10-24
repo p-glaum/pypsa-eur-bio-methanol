@@ -2596,10 +2596,11 @@ def add_biomass(n, costs):
             e_initial=msw_biomass_potentials_spatial,
         )
 
+    location = spatial.nodes if len(spatial.gas.biogas) > 1 else spatial.gas.locations
     n.madd(
         "Bus",
         spatial.gas.biogas,
-        location=spatial.gas.locations,
+        location=location,
         carrier="biogas",
         unit="MWh_LHV",
     )
