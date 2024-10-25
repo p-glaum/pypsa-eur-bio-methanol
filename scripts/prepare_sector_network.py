@@ -3639,23 +3639,22 @@ def add_industry(n, costs):
                     lifetime=costs.at["decentral oil boiler", "lifetime"],
                 )
 
+    total_efficiency = 1 / costs.at["Fischer-Tropsch", "hydrogen-input"]
     n.madd(
         "Link",
         nodes + " Fischer-Tropsch",
         bus0=nodes + " H2",
         bus1=spatial.oil.nodes,
-        bus2=spatial.co2.nodes,
+        bus2=spatial.oil.kerosene,
+        bus3=spatial.co2.nodes,
         carrier="Fischer-Tropsch",
-        efficiency=1 / costs.at["Fischer-Tropsch", "hydrogen-input"],
+        efficiency=total_efficiency
+        * 0.6,  # fraction naptha and diesel because cracking of naptha is done separately
+        efficiency2=total_efficiency * 0.4,  # fraction kerosene
+        efficiency3=-costs.at["oil", "CO2 intensity"] * total_efficiency,
         capital_cost=costs.at["Fischer-Tropsch", "fixed"]
-        * 1
-        / costs.at["Fischer-Tropsch", "hydrogen-input"],  # EUR/MW_H2/a
-        marginal_cost=1
-        / costs.at["Fischer-Tropsch", "hydrogen-input"]
-        * costs.at["Fischer-Tropsch", "VOM"],
-        efficiency2=-costs.at["oil", "CO2 intensity"]
-        * 1
-        / costs.at["Fischer-Tropsch", "hydrogen-input"],
+        * total_efficiency,  # EUR/MW_H2/a
+        marginal_cost=total_efficiency * costs.at["Fischer-Tropsch", "VOM"],
         p_nom_extendable=True,
         p_min_pu=options["min_part_load_fischer_tropsch"],
         lifetime=costs.at["Fischer-Tropsch", "lifetime"],
@@ -3934,9 +3933,14 @@ def add_industry(n, costs):
         p_set=p_set,
     )
 
-    efficiency = (
-        1 - 0.25 * 0.18
-    )  # guesstimate for energy demand for cracking of oils with higher C number than kerosene
+    efficiency = round(
+        (13.8 + 1.9)
+        / (
+            costs.at["electric steam cracker", "naphtha-input"]
+            + costs.at["electric steam cracker", "electricity-input"]
+        ),
+        2,
+    )  # energy content of high and low value chemicals divided by energy input (all in /tHVC unit)
 
     n.madd(
         "Link",
