@@ -174,6 +174,7 @@ def define_spatial(nodes, options):
     if options["regional_oil_demand"]:
         spatial.oil.demand_locations = nodes
         spatial.oil.naphtha = nodes + " naphtha for industry"
+        spatial.oil.HVC = nodes + " HVC for industry"
         spatial.oil.kerosene = nodes + " kerosene for aviation"
         spatial.oil.shipping = nodes + " shipping oil"
         spatial.oil.agriculture_machinery = nodes + " agriculture machinery oil"
@@ -181,6 +182,7 @@ def define_spatial(nodes, options):
     else:
         spatial.oil.demand_locations = ["EU"]
         spatial.oil.naphtha = ["EU naphtha for industry"]
+        spatial.oil.HVC = ["EU HVC for industry"]
         spatial.oil.kerosene = ["EU kerosene for aviation"]
         spatial.oil.shipping = ["EU shipping oil"]
         spatial.oil.agriculture_machinery = ["EU agriculture machinery oil"]
@@ -3253,7 +3255,7 @@ def add_biomass(n, costs):
 
 def add_industry(n, costs):
     logger.info("Add industrial demand")
-    # add oil buses for shipping, aviation and naptha for industry
+    # add oil buses for shipping, aviation and naphtha for industry
     add_carrier_buses(n, "oil")
     # add methanol buses for industry
     add_carrier_buses(n, "methanol")
@@ -3639,57 +3641,56 @@ def add_industry(n, costs):
                     lifetime=costs.at["decentral oil boiler", "lifetime"],
                 )
 
-    total_efficiency = 1 / costs.at["Fischer-Tropsch", "hydrogen-input"]
-    n.madd(
-        "Link",
-        nodes + " Fischer-Tropsch",
-        bus0=nodes + " H2",
-        bus1=spatial.oil.nodes,
-        bus2=spatial.oil.kerosene,
-        bus3=spatial.co2.nodes,
-        carrier="Fischer-Tropsch",
-        efficiency=total_efficiency
-        * 0.6,  # fraction naptha and diesel because cracking of naptha is done separately
-        efficiency2=total_efficiency * 0.4,  # fraction kerosene
-        efficiency3=-costs.at["oil", "CO2 intensity"] * total_efficiency,
-        capital_cost=costs.at["Fischer-Tropsch", "fixed"]
-        * total_efficiency,  # EUR/MW_H2/a
-        marginal_cost=total_efficiency * costs.at["Fischer-Tropsch", "VOM"],
-        p_nom_extendable=True,
-        p_min_pu=options["min_part_load_fischer_tropsch"],
-        lifetime=costs.at["Fischer-Tropsch", "lifetime"],
-    )
-
     # naphtha
     demand_factor = options["HVC_demand_factor"]
     if demand_factor != 1:
         logger.warning(f"Changing HVC demand by {demand_factor*100-100:+.2f}%.")
 
-    p_set_naphtha = (
+    p_set_HVC = (
         demand_factor
         * industrial_demand.loc[nodes, "naphtha"].rename(
-            lambda x: x + " naphtha for industry"
+            lambda x: x + " HVC for industry"
         )
         / nhours
     )
 
     if not options["regional_oil_demand"]:
-        p_set_naphtha = p_set_naphtha.sum()
+        p_set_HVC = p_set_HVC.sum()
 
     n.madd(
         "Bus",
         spatial.oil.naphtha,
         location=spatial.oil.demand_locations,
+        carrier="naphtha",
+        unit="MWh_LHV",
+    )
+
+    refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
+    n.madd(
+        "Link",
+        spatial.oil.naphtha,
+        bus0=spatial.oil.nodes,
+        bus1=spatial.oil.naphtha,
+        bus2="co2 atmosphere",
         carrier="naphtha for industry",
+        efficiency=1 - refining_losses,
+        efficiency2=costs.at["oil", "CO2 intensity"] * refining_losses,
+    )
+
+    n.madd(
+        "Bus",
+        spatial.oil.HVC,
+        location=spatial.oil.demand_locations,
+        carrier="HVC for industry",
         unit="MWh_LHV",
     )
 
     n.madd(
         "Load",
-        spatial.oil.naphtha,
-        bus=spatial.oil.naphtha,
-        carrier="naphtha for industry",
-        p_set=p_set_naphtha,
+        spatial.oil.HVC,
+        bus=spatial.oil.HVC,
+        carrier="HVC for industry",
+        p_set=p_set_HVC,
     )
 
     # some CO2 from naphtha are process emissions from steam cracker
@@ -3698,9 +3699,6 @@ def add_industry(n, costs):
         industrial_demand.loc[nodes, "process emission from feedstock"].sum()
         / industrial_demand.loc[nodes, "naphtha"].sum()
     )
-    efficiency = (
-        1 - 0.68 * 0.18
-    )  # guesstimate for energy demand for cracking of oils with higher C number than naphtha
 
     emitted_co2_per_naphtha = costs.at["oil", "CO2 intensity"] - process_co2_per_naphtha
 
@@ -3725,14 +3723,13 @@ def add_industry(n, costs):
 
         n.madd(
             "Link",
-            spatial.oil.naphtha,
-            bus0=spatial.oil.nodes,
-            bus1=spatial.oil.naphtha,
+            spatial.oil.HVC,
+            bus0=spatial.oil.naphtha,
+            bus1=spatial.oil.HVC,
             bus2=non_sequestered_hvc_locations,
             bus3=spatial.co2.process_emissions,
-            carrier="naphtha for industry",
+            carrier="HVC for industry",
             p_nom_extendable=True,
-            efficiency=efficiency,
             efficiency2=non_sequestered
             * emitted_co2_per_naphtha
             / costs.at["oil", "CO2 intensity"],
@@ -3817,19 +3814,18 @@ def add_industry(n, costs):
 
     else:
         if len(spatial.oil.nodes) > 1 or len(spatial.co2.nodes) > 1:
-            link_names = nodes + " naptha for industry"
+            link_names = nodes + " HVC for industry"
         else:
-            link_names = spatial.oil.naphtha
+            link_names = spatial.oil.HVC
         n.madd(
             "Link",
             link_names,
-            bus0=spatial.oil.nodes,
-            bus1=spatial.oil.naphtha,
+            bus0=spatial.oil.naphtha,
+            bus1=spatial.oil.HVC,
             bus2="co2 atmosphere",
             bus3=spatial.co2.process_emissions,
             carrier="naphtha for industry",
             p_nom_extendable=True,
-            efficiency=efficiency,
             efficiency2=emitted_co2_per_naphtha * non_sequestered,
             efficiency3=process_co2_per_naphtha,
         )
@@ -3857,13 +3853,13 @@ def add_industry(n, costs):
                 p_nom=p_nom,
                 p_nom_extendable=True,
                 bus0=spatial.methanol.nodes,
-                bus1=spatial.oil.naphtha,
+                bus1=spatial.oil.HVC,
                 bus2=nodes,
                 bus3=spatial.co2.process_emissions,
                 bus4="co2 atmosphere",
                 efficiency=1
                 / costs.at[tech, "methanol-input"]
-                * naphtha_per_t_hvc,  # because MtO produces HVC not naphta
+                * naphtha_per_t_hvc,  # because MtO produces t HVC not MWh HVC
                 efficiency2=-costs.at[tech, "electricity-input"]
                 / costs.at[tech, "methanol-input"],
                 efficiency3=process_emissions,
@@ -3882,13 +3878,13 @@ def add_industry(n, costs):
                 p_nom=p_nom,
                 p_nom_extendable=True,
                 bus0=spatial.methanol.nodes,
-                bus1=spatial.oil.naphtha,
+                bus1=spatial.oil.HVC,
                 bus2=nodes,
                 bus3=spatial.co2.process_emissions,
                 bus4=non_sequestered_hvc_locations,
                 efficiency=1
                 / costs.at[tech, "methanol-input"]
-                * naphtha_per_t_hvc,  # because MtO produces HVC not naphta
+                * naphtha_per_t_hvc,  # because MtO produces t HVC not MWh no MWh HVC
                 efficiency2=-costs.at[tech, "electricity-input"]
                 / costs.at[tech, "methanol-input"],
                 efficiency3=process_emissions,
@@ -3933,14 +3929,7 @@ def add_industry(n, costs):
         p_set=p_set,
     )
 
-    efficiency = round(
-        (13.8 + 1.9)
-        / (
-            costs.at["electric steam cracker", "naphtha-input"]
-            + costs.at["electric steam cracker", "electricity-input"]
-        ),
-        2,
-    )  # energy content of high and low value chemicals divided by energy input (all in /tHVC unit)
+    refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
 
     n.madd(
         "Link",
@@ -3950,12 +3939,35 @@ def add_industry(n, costs):
         bus2="co2 atmosphere",
         carrier="kerosene for aviation",
         p_nom_extendable=True,
-        efficiency=efficiency,
+        efficiency=1 - refining_losses,
         efficiency2=costs.at["oil", "CO2 intensity"],
     )
 
     if options["methanol"]["methanol_to_kerosene"]:
         add_methanol_to_kerosene(n, costs)
+
+    # Add Fischer-Tropsch
+    total_efficiency = 1 / costs.at["Fischer-Tropsch", "hydrogen-input"]
+    n.madd(
+        "Link",
+        nodes + " Fischer-Tropsch",
+        bus0=nodes + " H2",
+        bus1=spatial.oil.naphtha,
+        bus2=spatial.oil.kerosene,
+        bus3=spatial.oil.nodes,
+        bus4=spatial.co2.nodes,
+        carrier="Fischer-Tropsch",
+        efficiency=total_efficiency * 0.3,  # fraction naphtha
+        efficiency2=total_efficiency * 0.4,  # fraction kerosene
+        efficiency3=total_efficiency * 0.3,  # fraction diesel
+        efficiency4=-costs.at["oil", "CO2 intensity"] * total_efficiency,
+        capital_cost=costs.at["Fischer-Tropsch", "fixed"]
+        * total_efficiency,  # EUR/MW_H2/a
+        marginal_cost=total_efficiency * costs.at["Fischer-Tropsch", "VOM"],
+        p_nom_extendable=True,
+        p_min_pu=options["min_part_load_fischer_tropsch"],
+        lifetime=costs.at["Fischer-Tropsch", "lifetime"],
+    )
 
     # TODO simplify bus expression
     n.madd(
