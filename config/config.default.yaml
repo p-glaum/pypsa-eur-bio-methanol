@@ -444,6 +444,16 @@ sector:
   industry: true
   agriculture: true
   fossil_fuels: true
+  fuel_imports:
+    enable: false
+    fuel:
+    - H2
+    - methanol
+    - ammonia
+    price:
+      h2: 100
+      methanol: 140
+      ammonia: 110
   district_heating:
     potential: 0.6
     progress:

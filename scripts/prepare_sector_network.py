@@ -518,10 +518,20 @@ def add_carrier_buses(n, carrier, nodes=None):
         capital_cost=capital_cost,
     )
 
-    fossils = ["coal", "gas", "oil", "lignite"]
-    if options["fossil_fuels"] and carrier in fossils:
+    import_options = options.get("fuel_imports", {})
+    fossil_fuels = ["coal", "gas", "oil", "lignite"]
 
-        suffix = ""
+    if (
+        options["fossil_fuels"] and carrier in fossil_fuels
+    ) or carrier in import_options.get("fuel", []):
+        if import_options.get("enable", False) and carrier in import_options.get(
+            "fuel", []
+        ):
+            fuel_price = import_options["price"][carrier]
+        else:
+            fuel_price = costs.at[carrier, "fuel"]
+
+        suffix = " import"
 
         if carrier == "oil" and cf_industry["oil_refining_emissions"] > 0:
 
@@ -552,13 +562,16 @@ def add_carrier_buses(n, carrier, nodes=None):
 
             suffix = " primary"
 
+        if carrier == "gas" and (options["gas_spatial"] and not options["gas_network"]):
+            return
+
         n.madd(
             "Generator",
             nodes + suffix,
             bus=nodes + suffix,
             p_nom_extendable=True,
             carrier=carrier + suffix,
-            marginal_cost=costs.at[carrier, "fuel"],
+            marginal_cost=fuel_price,
         )
 
 
