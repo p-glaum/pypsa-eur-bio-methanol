@@ -529,6 +529,7 @@ def add_carrier_buses(n, carrier, nodes=None):
             fuel_price = costs.at[carrier, "fuel"]
 
         suffix = " import"
+        bus_suffix = ""
 
         if carrier == "oil" and cf_industry["oil_refining_emissions"] > 0:
 
@@ -558,6 +559,7 @@ def add_carrier_buses(n, carrier, nodes=None):
             )
 
             suffix = " primary"
+            bus_suffix = " primary"
 
         if carrier == "gas" and (options["gas_spatial"] and not options["gas_network"]):
             return
@@ -565,7 +567,7 @@ def add_carrier_buses(n, carrier, nodes=None):
         n.madd(
             "Generator",
             nodes + suffix,
-            bus=nodes + suffix,
+            bus=nodes + bus_suffix,
             p_nom_extendable=True,
             carrier=carrier + suffix,
             marginal_cost=fuel_price,
@@ -3002,7 +3004,10 @@ def add_biomass(n, costs):
                 carrier="municipal solid waste",
                 p_nom=10000,
                 marginal_cost=0  # costs.at["municipal solid waste", "fuel"]
-                + bus_transport_costs * average_distance,
+                + bus_transport_costs.rename(
+                    dict(zip(spatial.biomass.nodes, spatial.msw.nodes))
+                )
+                * average_distance,
             )
             n.add(
                 "GlobalConstraint",
