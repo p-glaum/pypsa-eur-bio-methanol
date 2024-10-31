@@ -658,9 +658,6 @@ sector:
   - nearshore    # within 50 km of sea
     # - offshore
   methanol:
-    import:
-      enable: false
-      price: 140 #EUR/MWh
     regional_methanol_demand: false
     methanol_reforming: false
     methanol_reforming_cc: false
@@ -703,6 +700,7 @@ sector:
       efficiency_static: 0.97
   H2_network: true
   gas_network: false
+  gas_spatial: false
   H2_retrofit: false
   H2_retrofit_capacity_per_CH4: 0.6
   gas_network_connectivity_upgrade: 1
@@ -710,6 +708,7 @@ sector:
   gas_distribution_grid_cost_factor: 1.0
   biomass_spatial: false
   biomass_transport: false
+  bio_to_gas: true
   biogas_upgrading_cc: false
   conventional_generation:
     OCGT: gas
