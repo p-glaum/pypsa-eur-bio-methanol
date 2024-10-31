@@ -648,6 +648,9 @@ sector:
   - nearshore    # within 50 km of sea
     # - offshore
   methanol:
+    import:
+      enable: false
+      price: 140 #EUR/MWh
     regional_methanol_demand: false
     methanol_reforming: false
     methanol_reforming_cc: false
@@ -1236,11 +1239,12 @@ plotting:
     services rural ground heat pump: '#5af95d'
     Ambient: '#98eb9d'
     CHP: '#8a5751'
-    urban central gas CHP: '#8d5e56'
     urban central CHP: '#8d5e56'
+    urban central gas CHP: '#8d5e56'
+    urban central methanol CHP: '#A17666'
     CHP CC: '#634643'
     urban central gas CHP CC: '#6e4e4c'
-    urban central CHP CC: '#6e4e4c'
+    urban central methanol CHP CC: '#926B61'
     CHP heat: '#8a5751'
     CHP electric: '#8a5751'
     district heating: '#e8beac'

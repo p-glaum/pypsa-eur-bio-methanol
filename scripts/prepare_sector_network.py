@@ -2347,7 +2347,7 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                     bus1=nodes,
                     bus2=nodes + " urban central heat",
                     bus3="co2 atmosphere",
-                    carrier="urban central CHP",
+                    carrier=f"urban central {fuel} CHP",
                     p_nom_extendable=True,
                     capital_cost=costs.at["central gas CHP", "fixed"]
                     * costs.at["central gas CHP", "efficiency"],
@@ -2361,13 +2361,13 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
 
                 n.madd(
                     "Link",
-                    nodes + " urban central gas CHP CC",
+                    nodes + f" urban central {fuel} CHP CC",
                     bus0=fuel_nodes.loc[nodes, "nodes"].values,
                     bus1=nodes,
                     bus2=nodes + " urban central heat",
                     bus3="co2 atmosphere",
                     bus4=spatial.co2.df.loc[nodes, "nodes"].values,
-                    carrier="urban central CHP CC",
+                    carrier=f"urban central {fuel} CHP CC",
                     p_nom_extendable=True,
                     capital_cost=costs.at["central gas CHP", "fixed"]
                     * costs.at["central gas CHP", "efficiency"]
@@ -2945,8 +2945,9 @@ def add_biomass(n, costs):
         n.madd(
             "Generator",
             spatial.biomass.nodes,
+            suffix=" transport",
             bus=spatial.biomass.nodes,
-            carrier="solid biomass transport",
+            carrier="solid biomass",
             p_nom=10000,
             marginal_cost=costs.at["solid biomass", "fuel"]
             + bus_transport_costs * average_distance,
