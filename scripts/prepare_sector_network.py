@@ -2557,6 +2557,23 @@ def add_methanol(n, costs):
     if methanol_options["methanol_reforming_cc"]:
         add_methanol_reforming_cc(n, costs)
 
+    if methanol_options["import"].get("enable", False):
+        methanol_import_price = methanol_options["import"]["price"]
+
+        logger.info(
+            "Adding methanol import with cost %.2f EUR/MWh",
+            methanol_import_price,
+        )
+
+        n.add(
+            "Generator",
+            name="methanol import",
+            bus=spatial.methanol.nodes,
+            carrier="methanol import",
+            marginal_cost=methanol_import_price,
+            p_nom_extendable=True,
+        )
+
 
 def add_biomass(n, costs):
     logger.info("Add biomass")
@@ -4748,11 +4765,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="39",
-            ll="vopt",
+            clusters="70",
+            ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="no_gas_no_fossil",
+            run="no_fossil",
         )
 
     configure_logging(snakemake)
