@@ -564,7 +564,7 @@ def add_carrier_buses(n, carrier, nodes=None):
         if carrier == "gas" and (options["gas_spatial"] and not options["gas_network"]):
             return
 
-        n.madd(
+        n.add(
             "Generator",
             nodes + suffix,
             bus=nodes + bus_suffix,
@@ -2346,7 +2346,7 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 fuel_type = [fuel_type]
             for fuel in fuel_type:
                 fuel_nodes = eval(f"spatial.{fuel}.df")
-                n.madd(
+                n.add(
                     "Link",
                     nodes + f" urban central {fuel} CHP",
                     bus0=fuel_nodes.loc[nodes, "nodes"].values,
@@ -2365,7 +2365,7 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                     lifetime=costs.at["central gas CHP", "lifetime"],
                 )
 
-                n.madd(
+                n.add(
                     "Link",
                     nodes + f" urban central {fuel} CHP CC",
                     bus0=fuel_nodes.loc[nodes, "nodes"].values,
@@ -2656,7 +2656,7 @@ def add_biomass(n, costs):
         )
 
     location = spatial.nodes if len(spatial.gas.biogas) > 1 else spatial.gas.locations
-    n.madd(
+    n.add(
         "Bus",
         spatial.gas.biogas,
         location=location,
@@ -2817,7 +2817,7 @@ def add_biomass(n, costs):
         )
 
     if options["bio_to_gas"]:
-        n.madd(
+        n.add(
             "Link",
             spatial.gas.biogas,
             suffix=" to gas",
@@ -3188,7 +3188,7 @@ def add_biomass(n, costs):
 
     # BioSNG from solid biomass
     if options["biosng"] and options["bio_to_gas"]:
-        n.madd(
+        n.add(
             "Link",
             spatial.biomass.nodes,
             suffix=" solid biomass to gas",
@@ -3280,7 +3280,7 @@ def add_industry(n, costs):
 
     # add biomass for industry
 
-    n.madd(
+    n.add(
         "Bus",
         spatial.biomass.industry,
         location=spatial.biomass.locations,
@@ -3402,7 +3402,7 @@ def add_industry(n, costs):
 
     gas_demand = industrial_demand.loc[nodes, "methane"] / nhours
 
-    n.madd(
+    n.add(
         "Bus",
         spatial.gas.industry,
         location=spatial.gas.locations,
@@ -3691,7 +3691,7 @@ def add_industry(n, costs):
     )
 
     refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
-    n.madd(
+    n.add(
         "Link",
         spatial.oil.naphtha,
         bus0=spatial.oil.nodes,
@@ -3956,7 +3956,7 @@ def add_industry(n, costs):
 
     refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
 
-    n.madd(
+    n.add(
         "Link",
         spatial.oil.kerosene,
         bus0=spatial.oil.nodes,
@@ -3995,7 +3995,7 @@ def add_industry(n, costs):
     )
 
     # TODO simplify bus expression
-    n.madd(
+    n.add(
         "Load",
         nodes,
         suffix=" low-temperature heat for industry",
