@@ -2608,10 +2608,9 @@ def add_biomass(n, costs):
     n.add("Carrier", "biogas")
     n.add("Carrier", "solid biomass")
 
-    if (
-        options["municipal_solid_waste"]
-        and not options["industry"]
-        and not (cf_industry["waste_to_energy"] or cf_industry["waste_to_energy_cc"])
+    if options["municipal_solid_waste"] and (
+        not options["industry"]
+        or not (cf_industry["waste_to_energy"] or cf_industry["waste_to_energy_cc"])
     ):
         logger.warning(
             "Flag municipal_solid_waste can be only used with industry "
@@ -3732,6 +3731,12 @@ def add_industry(n, costs):
         investment_year,
     )
 
+    # add link name for naptha to HVC depending on number of oil nodes/ co2 nodes
+    if len(spatial.oil.nodes) > 1 or len(spatial.co2.nodes) > 1:
+        link_names = nodes + " HVC for industry"
+    else:
+        link_names = spatial.oil.HVC
+
     if cf_industry["waste_to_energy"] or cf_industry["waste_to_energy_cc"]:
 
         non_sequestered_hvc_locations = (
@@ -3748,7 +3753,7 @@ def add_industry(n, costs):
 
         n.madd(
             "Link",
-            spatial.oil.HVC,
+            link_names,
             bus0=spatial.oil.naphtha,
             bus1=spatial.oil.HVC,
             bus2=non_sequestered_hvc_locations,
@@ -3838,10 +3843,6 @@ def add_industry(n, costs):
             )
 
     else:
-        if len(spatial.oil.nodes) > 1 or len(spatial.co2.nodes) > 1:
-            link_names = nodes + " HVC for industry"
-        else:
-            link_names = spatial.oil.HVC
         n.madd(
             "Link",
             link_names,
