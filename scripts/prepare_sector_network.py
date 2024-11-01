@@ -3461,7 +3461,7 @@ def add_industry(n, costs):
         bus0=spatial.methanol.nodes,
         bus1=spatial.gas.industry,
         bus2="co2 atmosphere",
-        carrier="methanol for industry",
+        carrier="industry methanol",
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
