@@ -1086,6 +1086,9 @@ rule prepare_sector_network:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_demand_today=resources(
+            "industrial_energy_demand_today_base_s_{clusters}.csv"
+        ),
         hourly_heat_demand_total=resources(
             "hourly_heat_demand_total_base_s_{clusters}.nc"
         ),
