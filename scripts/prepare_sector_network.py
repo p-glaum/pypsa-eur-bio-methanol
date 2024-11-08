@@ -148,17 +148,23 @@ def define_spatial(nodes, options):
 
     spatial.methanol = SimpleNamespace()
 
-    spatial.methanol.nodes = ["EU methanol"]
-    spatial.methanol.locations = ["EU"]
-
-    if options["methanol"]["regional_methanol_demand"]:
+    if options["methanol"]["transport"]:
+        spatial.methanol.nodes = nodes + " methanol"
+        spatial.methanol.locations = nodes
         spatial.methanol.demand_locations = nodes
         spatial.methanol.industry = nodes + " industry methanol"
         spatial.methanol.shipping = nodes + " shipping methanol"
     else:
-        spatial.methanol.demand_locations = ["EU"]
-        spatial.methanol.shipping = ["EU shipping methanol"]
-        spatial.methanol.industry = ["EU industry methanol"]
+        spatial.methanol.nodes = ["EU methanol"]
+        spatial.methanol.locations = ["EU"]
+        if options["methanol"]["regional_methanol_demand"]:
+            spatial.methanol.demand_locations = nodes
+            spatial.methanol.industry = nodes + " industry methanol"
+            spatial.methanol.shipping = nodes + " shipping methanol"
+        else:
+            spatial.methanol.demand_locations = ["EU"]
+            spatial.methanol.shipping = ["EU shipping methanol"]
+            spatial.methanol.industry = ["EU industry methanol"]
 
     spatial.methanol.df = pd.DataFrame(vars(spatial.methanol), index=nodes)
 
@@ -2556,6 +2562,24 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
 def add_methanol(n, costs):
 
     methanol_options = options["methanol"]
+
+    if methanol_options["transport"]:
+        methanol_transport = create_network_topology(
+            n, "methanol transport ", bidirectional=True
+        )
+        n.add(
+            "Link",
+            methanol_transport.index,
+            bus0=methanol_transport.bus0 + " methanol",
+            bus1=methanol_transport.bus1 + " methanol",
+            p_nom_extendable=False,
+            p_nom=5e4,
+            length=methanol_transport.length,
+            marginal_cost=methanol_options["transport_cost"]
+            * methanol_transport.length,
+            carrier="methanol transport",
+        )
+
     if not any(methanol_options.values()):
         return
 

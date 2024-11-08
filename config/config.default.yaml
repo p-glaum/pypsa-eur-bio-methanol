@@ -658,6 +658,8 @@ sector:
     # - offshore
   methanol:
     regional_methanol_demand: false
+    transport: false
+    transport_cost: 0.027 # from tom in discord chat 10€/MWh/1000km # assuming 0.15€/ton-km and 19.7MJ/kg -> 22.2*1000/3600 = 5.47 MWh/t -> 0.15/5.47 = 0.027 €/MWh/km
     methanol_reforming: false
     methanol_reforming_cc: false
     methanol_to_kerosene: false
