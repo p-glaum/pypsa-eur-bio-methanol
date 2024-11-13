@@ -3348,6 +3348,25 @@ def add_industry(n, costs):
             unit="t",
         )
 
+        if options.get("HBI_import", False):
+            n.add(
+                "Generator",
+                "HBI import",
+                bus="EU HBI",
+                carrier="HBI",
+                p_nom_extendable=True,
+                marginal_cost=options["HBI_import"],
+            )
+        if options.get("steel_import", False):
+            n.add(
+                "Generator",
+                "steel import",
+                bus="EU steel",
+                carrier="steel",
+                p_nom_extendable=True,
+                marginal_cost=options["steel_import"],
+            )
+
         n.add(
             "Load",
             "EU steel",
@@ -3924,7 +3943,7 @@ def add_industry(n, costs):
             bus1=spatial.oil.HVC,
             bus2=non_sequestered_hvc_locations,
             bus3=spatial.co2.process_emissions,
-            carrier="HVC for industry",
+            carrier="naphtha-to-HVC",
             p_nom_extendable=True,
             efficiency2=non_sequestered
             * emitted_co2_per_naphtha
@@ -4023,7 +4042,7 @@ def add_industry(n, costs):
             bus1=spatial.oil.HVC,
             bus2="co2 atmosphere",
             bus3=spatial.co2.process_emissions,
-            carrier="naphtha for industry",
+            carrier="naphtha-to-HVC",
             p_nom_extendable=True,
             efficiency2=emitted_co2_per_naphtha * non_sequestered,
             efficiency3=process_co2_per_naphtha,
@@ -4148,7 +4167,7 @@ def add_industry(n, costs):
         bus0=spatial.oil.nodes,
         bus1=spatial.oil.kerosene,
         bus2="co2 atmosphere",
-        carrier="kerosene refined",
+        carrier="oil-to-kerosene",
         p_nom_extendable=True,
         efficiency=1 - refining_losses,
         efficiency2=costs.at["oil", "CO2 intensity"] * refining_losses,
@@ -4160,7 +4179,7 @@ def add_industry(n, costs):
         bus0=spatial.oil.kerosene,
         bus1=spatial.oil.aviation,
         bus2="co2 atmosphere",
-        carrier="kerosene refined",
+        carrier="oil-to-kerosene",
         p_nom_extendable=True,
         efficiency=1,
         efficiency2=costs.at["oil", "CO2 intensity"],

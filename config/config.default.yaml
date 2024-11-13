@@ -678,6 +678,8 @@ sector:
   relocation_ammonia: false
   endogenous_steel: false
   relocation_steel: false
+  HBI_import: false   # in €/t
+  steel_import: false # in €/t
   min_part_load_fischer_tropsch: 0.5
   min_part_load_methanolisation: 0.3
   min_part_load_methanation: 0.3
@@ -1305,12 +1307,13 @@ plotting:
     # synfuels
     Fischer-Tropsch: '#25c49a'
     liquid: '#25c49a'
-    kerosene refined: '#91e6d6'
+    oil-to-kerosene: '#91e6d6'
     kerosene: '#91e6d6'
     kerosene for aviation: '#a1ffe6'
     naphtha for industry: '#57ebc4'
     HVC for industry: '#57ebc4'
     naphtha: '#57ebc4'
+    naphtha-to-HVC: '#57ebc4'
     methanol-to-kerosene: '#C98468'
     methanol-to-gasoline: '#afafaf'
     methanol-to-olefins/aromatics: '#FFA07A'
@@ -1374,3 +1377,7 @@ plotting:
     waste CHP: '#e3d37d'
     waste CHP CC: '#e3d3ff'
     HVC to air: 'k'
+    steel: '#b1bbc9'
+    DRI: '#b1bbc9'
+    EAF: '#b1bba1'
+    HBI: '#cd7a56'
