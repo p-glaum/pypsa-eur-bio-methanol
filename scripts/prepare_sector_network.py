@@ -473,6 +473,77 @@ def update_wind_solar_costs(
             )
 
 
+def add_green_fuel_imports(n, options):
+    """
+    Add green fuel imports to the network.
+    """
+    import_options = options.get("fuel_imports", {})
+    for fuel in import_options.get("fuel", []):
+        if fuel not in n.buses.carrier.unique():
+            continue
+        co2_content = costs.get("CO2 intensity").get(fuel, 0)
+        upstream_emissions = import_options["upstream_emissions"].get(fuel, 0)
+        fuel_price = import_options["price"][fuel]
+        logging.info(
+            f"Adding import of green {fuel} with price of {fuel_price} EUR/MWh and upstream emissions of {upstream_emissions} t/MWh."
+        )
+        if fuel == "NH3":
+            fuel = "ammonia"
+        fuel_nodes = getattr(spatial, fuel.lower()).nodes
+        if co2_content - upstream_emissions > 0:
+            n.add(
+                "Bus",
+                fuel + " import",
+                carrier=fuel,
+                marginal_cost=fuel_price,
+                p_nom_extendable=True,
+                location="EU",
+            )
+            n.add(
+                "Generator",
+                fuel + " import",
+                bus=fuel + " import",
+                carrier=fuel + " import",
+                marginal_cost=fuel_price,
+                p_nom_extendable=True,
+            )
+            n.add(
+                "Link",
+                fuel_nodes,
+                suffix=" import",
+                bus0=fuel + " import",
+                bus1=fuel_nodes,
+                bus2="co2 atmosphere",
+                carrier=fuel + " import",
+                efficiency2=-(co2_content - upstream_emissions),
+                p_nom_extendable=True,
+            )
+        elif fuel == "H2":
+            if not options["H2_network"]:
+                logging.info("Cannot import H2 without H2 network.")
+                continue
+            fn = snakemake.input.gas_input_nodes_simplified
+            H2_nodes = pd.read_csv(fn, index_col=0)["lng"].dropna()
+            H2_nodes = H2_nodes.index + " H2"
+            n.add(
+                "Generator",
+                H2_nodes + " import",
+                bus=H2_nodes,
+                carrier="H2 import",
+                marginal_cost=fuel_price,
+                p_nom_extendable=True,
+            )
+        else:
+            n.add(
+                "Generator",
+                fuel_nodes + " import",
+                bus=fuel_nodes,
+                carrier=fuel + " import",
+                marginal_cost=fuel_price,
+                p_nom_extendable=True,
+            )
+
+
 def add_carrier_buses(n, carrier, nodes=None):
     """
     Add buses to connect e.g. coal, nuclear and oil plants.
@@ -523,18 +594,10 @@ def add_carrier_buses(n, carrier, nodes=None):
         capital_cost=capital_cost,
     )
 
-    import_options = options.get("fuel_imports", {})
     fossil_fuels = ["coal", "gas", "oil", "lignite"]
 
-    if (
-        options["fossil_fuels"] and carrier in fossil_fuels
-    ) or carrier in import_options.get("fuel", []):
-        if import_options.get("enable", False) and carrier in import_options.get(
-            "fuel", []
-        ):
-            fuel_price = import_options["price"][carrier]
-        else:
-            fuel_price = costs.at[carrier, "fuel"]
+    if options["fossil_fuels"] and carrier in fossil_fuels:
+        fuel_price = costs.at[carrier, "fuel"]
 
         suffix = " import"
         bus_suffix = ""
@@ -5186,6 +5249,8 @@ if __name__ == "__main__":
     )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+
+    add_green_fuel_imports(n, options)
 
     sanitize_carriers(n, snakemake.config)
     sanitize_locations(n)

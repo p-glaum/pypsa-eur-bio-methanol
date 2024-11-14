@@ -449,11 +449,18 @@ sector:
     fuel:
     - H2
     - methanol
-    - ammonia
+    - NH3
+    - oil
+    upstream_emissions:
+      methanol: 0.0
+      NH3: 0.0
+      oil: 0.0
+      H2: 0.0
     price:
-      h2: 100
+      H2: 100
       methanol: 140
-      ammonia: 110
+      NH3: 110
+      oil: 140
   district_heating:
     potential: 0.6
     progress:
@@ -1130,6 +1137,7 @@ plotting:
     gas pipeline new: '#a87c62'
     # oil
     oil: '#c9c9c9'
+    oil import: '#c9c9c9' # this is FT
     oil primary: '#d2d2d2'
     oil refining: '#e6e6e6'
     imported oil: '#a3a3a3'
@@ -1298,6 +1306,7 @@ plotting:
     # ammonia
     NH3: '#46caf0'
     ammonia: '#46caf0'
+    ammonia import: '#46caf0'
     ammonia store: '#00ace0'
     ammonia cracker: '#87d0e6'
     Haber-Bosch: '#076987'
@@ -1329,6 +1338,7 @@ plotting:
     CCGT methanol CC: '#B98F76'
     OCGT methanol: '#B98F76'
     methanol: '#FF7B00'
+    methanol import: '#FF7B00'
     methanol transport: '#FF7B00'
     shipping methanol: '#468c8b'
     industry methanol: '#468c8b'
