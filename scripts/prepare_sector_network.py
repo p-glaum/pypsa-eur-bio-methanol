@@ -2972,6 +2972,17 @@ def add_biomass(n, costs):
         )
 
     if options["methanol"]["biogas_to_methanol"]:
+        efficiency = (
+            1 / 0.78
+        )  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
+        efficiency2 = -0.76 * 1 / 0.78  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
+        # from fig.4.1 paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
+        carbon_efficiency = 0.93
+        capital_cost = costs.at["biogas", "fixed"]
+        +efficiency * costs.at["methanolisation", "fixed"]
+        +efficiency2 * costs.at[
+            "electrolysis", "fixed"
+        ]  # rough cost estimation from adding up technology costs
         n.add(
             "Link",
             spatial.nodes + " biogas to methanol",
@@ -2979,22 +2990,42 @@ def add_biomass(n, costs):
             bus1=spatial.methanol.nodes,
             bus2=spatial.nodes,
             bus3="co2 atmosphere",
-            efficiency=1
-            / 0.78,  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
-            efficiency2=-0.76 * 1 / 0.78,  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
-            efficiency3=-0.93
-            * costs.at[
-                "methanolisation", "carbondioxide-input"
-            ],  # carbon efficiency from paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
+            efficiency=efficiency,
+            efficiency2=efficiency2,
+            efficiency3=-carbon_efficiency
+            * efficiency
+            * costs.at["methanolisation", "carbondioxide-input"],
             carrier="biogas-to-methanol",
-            capital_cost=costs.at["biogas", "fixed"]
-            + 1 / 0.78 * costs.at["methanolisation", "fixed"]
-            + 0.76
-            * 1
-            / 0.78
-            * costs.at[
-                "electrolysis", "fixed"
-            ],  # rough cost estimation from adding up technology cost
+            capital_cost=capital_cost,
+            p_nom_extendable=True,
+        )
+
+        capital_cost_cc = (
+            capital_cost
+            + costs.at["cement capture", "fixed"]
+            * (1 - carbon_efficiency)
+            * efficiency
+            * costs.at["methanolisation", "carbondioxide-input"]
+        )
+
+        n.add(
+            "Link",
+            spatial.nodes + " biogas to methanol CC",
+            bus0=spatial.gas.biogas,
+            bus1=spatial.methanol.nodes,
+            bus2=spatial.nodes,
+            bus3="co2 atmosphere",
+            bus4=spatial.co2.nodes,
+            efficiency=efficiency,
+            efficiency2=-efficiency2,
+            efficiency3=-carbon_efficiency
+            * efficiency
+            * costs.at["methanolisation", "carbondioxide-input"],
+            efficiency4=(1 - carbon_efficiency)
+            * efficiency
+            * costs.at["methanolisation", "carbondioxide-input"],
+            carrier="biogas-to-methanol CC",
+            capital_cost=capital_cost_cc,
             p_nom_extendable=True,
         )
 
@@ -3723,7 +3754,7 @@ def add_industry(n, costs):
         carrier="industry methanol CC",
         p_nom_extendable=True,
         capital_cost=costs.at["cement capture", "fixed"]
-        * costs.at["gas", "CO2 intensity"],
+        * costs.at["methanol", "CO2 intensity"],
         efficiency=0.9,
         efficiency2=costs.at["methanol", "CO2 intensity"]
         * (1 - costs.at["cement capture", "capture_rate"]),
