@@ -569,7 +569,9 @@ def add_carrier_buses(n, carrier, nodes=None):
             suffix = " primary"
             bus_suffix = " primary"
 
-        if carrier == "gas" and (options["gas_spatial"] or not options["gas_network"]):
+        if carrier == "gas" and not (
+            options["gas_network"] and option["import_fossil_gas"]
+        ):
             return
 
         n.add(
