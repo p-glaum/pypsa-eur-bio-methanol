@@ -629,6 +629,7 @@ sector:
   allam_cycle_gas: false
   hydrogen_fuel_cell: true
   hydrogen_turbine: false
+  hydrogen_chp: false
   SMR: true
   SMR_cc: true
   regional_oil_demand: false
@@ -1133,8 +1134,8 @@ plotting:
     allam: '#B98F76'
     gas for industry co2 to atmosphere: '#692e0a'
     gas for industry co2 to stored: '#8a3400'
-    gas for industry: '#853403'
-    gas for industry CC: '#692e0a'
+    gas for industry heat: '#853403'
+    gas for industry heat CC: '#692e0a'
     gas pipeline: '#ebbca0'
     gas pipeline new: '#a87c62'
     # oil
@@ -1271,6 +1272,7 @@ plotting:
     urban central CHP: '#8d5e56'
     urban central gas CHP: '#8d5e56'
     urban central methanol CHP: '#A17666'
+    urban central H2 CHP: '#6CA1D6'
     CHP CC: '#634643'
     urban central gas CHP CC: '#6e4e4c'
     urban central methanol CHP CC: '#926B61'
@@ -1287,6 +1289,7 @@ plotting:
     building retrofitting: '#8487e8'
     # hydrogen
     H2 for industry: "#f073da"
+    H2 for industry heat: "#d162c4"
     H2 for shipping: "#ebaee0"
     H2: '#bf13a0'
     hydrogen: '#bf13a0'
@@ -1344,7 +1347,8 @@ plotting:
     methanol transport: '#FF7B00'
     shipping methanol: '#468c8b'
     industry methanol: '#468c8b'
-    industry methanol CC: '#5a9b9a'
+    methanol for industry heat: '#468c8b'
+    methanol for industry heat CC: '#5a9b9a'
     # co2
     CC: '#f29dae'
     CCS: '#f29dae'

@@ -109,17 +109,12 @@ def define_spatial(nodes, options):
         spatial.gas.nodes = nodes + " gas"
         spatial.gas.locations = nodes
         spatial.gas.biogas = nodes + " biogas"
-        spatial.gas.industry = nodes + " gas for industry"
-        spatial.gas.industry_cc = nodes + " gas for industry CC"
+        spatial.gas.industry = nodes + " heat for industry"
     else:
         spatial.gas.nodes = ["EU gas"]
         spatial.gas.locations = ["EU"]
         spatial.gas.biogas = ["EU biogas"]
-        spatial.gas.industry = ["gas for industry"]
-        if options.get("co2_spatial", options["co2network"]):
-            spatial.gas.industry_cc = nodes + " gas for industry CC"
-        else:
-            spatial.gas.industry_cc = ["gas for industry CC"]
+        spatial.gas.industry = ["heat for industry"]
 
     spatial.gas.df = pd.DataFrame(vars(spatial.gas), index=nodes)
 
@@ -1557,6 +1552,10 @@ def add_storage_and_grids(n, costs):
             "Adding hydrogen turbine for re-electrification. Assuming OCGT technology costs."
         )
         # TODO: perhaps replace with hydrogen-specific technology assumptions.
+        marginal_cost = costs.at["OCGT", "VOM"]
+
+        if options["H2_distribution_cost"]:
+            marginal_cost += options["H2_distribution_cost"]
 
         n.add(
             "Link",
@@ -1568,7 +1567,7 @@ def add_storage_and_grids(n, costs):
             efficiency=costs.at["OCGT", "efficiency"],
             capital_cost=costs.at["OCGT", "fixed"]
             * costs.at["OCGT", "efficiency"],  # NB: fixed cost is per MWel
-            marginal_cost=costs.at["OCGT", "VOM"],
+            marginal_cost=marginal_cost,
             lifetime=costs.at["OCGT", "lifetime"],
         )
 
@@ -2537,6 +2536,29 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                     * costs.at["biomass CHP capture", "capture_rate"],
                     lifetime=costs.at["central gas CHP", "lifetime"],
                 )
+
+        if options["hydrogen_chp"] and heat_system == HeatSystem.URBAN_CENTRAL:
+            logger.info("Adding hydrogen CHP. Assuming gas CHP technology costs.")
+
+            if options.get("H2_distribution_cost"):
+                marginal_cost = options["H2_distribution_cost"]
+
+            n.add(
+                "Link",
+                nodes + " urban central H2 CHP",
+                bus0=nodes + " H2",
+                bus1=nodes,
+                bus2=nodes + " urban central heat",
+                carrier="urban central H2 CHP",
+                p_nom_extendable=True,
+                capital_cost=costs.at["central gas CHP", "fixed"]
+                * costs.at["central gas CHP", "efficiency"],
+                marginal_cost=marginal_cost,
+                efficiency=costs.at["central gas CHP", "efficiency"],
+                efficiency2=costs.at["central gas CHP", "efficiency"]
+                / costs.at["central gas CHP", "c_b"],
+                lifetime=costs.at["central gas CHP", "lifetime"],
+            )
 
         if (
             options["chp"]["enable"]
@@ -3738,7 +3760,7 @@ def add_industry(n, costs):
         "Bus",
         spatial.gas.industry,
         location=spatial.gas.locations,
-        carrier="gas for industry",
+        carrier="heat for industry",
         unit="MWh_LHV",
     )
 
@@ -3748,7 +3770,7 @@ def add_industry(n, costs):
     )
 
     if options["gas_network"] or options["gas_spatial"]:
-        spatial_gas_demand = gas_demand.rename(index=lambda x: x + " gas for industry")
+        spatial_gas_demand = gas_demand.rename(index=lambda x: x + " heat for industry")
     else:
         spatial_gas_demand = gas_demand.sum()
 
@@ -3756,17 +3778,18 @@ def add_industry(n, costs):
         "Load",
         spatial.gas.industry,
         bus=spatial.gas.industry,
-        carrier="gas for industry",
+        carrier="heat for industry",
         p_set=spatial_gas_demand,
     )
 
     n.add(
         "Link",
         spatial.gas.industry,
+        suffix=" (gas)",
         bus0=spatial.gas.nodes,
         bus1=spatial.gas.industry,
         bus2="co2 atmosphere",
-        carrier="gas for industry",
+        carrier="gas for industry heat",
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["gas", "CO2 intensity"],
@@ -3779,12 +3802,13 @@ def add_industry(n, costs):
 
     n.add(
         "Link",
-        spatial.gas.industry_cc,
+        spatial.gas.industry,
+        suffix=" (gas) CC",
         bus0=spatial.gas.nodes,
         bus1=spatial.gas.industry,
         bus2="co2 atmosphere",
         bus3=spatial.co2.nodes,
-        carrier="gas for industry CC",
+        carrier="gas for industry heat CC",
         p_nom_extendable=True,
         capital_cost=costs.at["cement capture", "fixed"]
         * costs.at["gas", "CO2 intensity"],
@@ -3800,7 +3824,7 @@ def add_industry(n, costs):
             else 0
         ),
     )
-    # allow methanol to serve gas demand
+    # allow methanol to serve heat demand
     n.add(
         "Link",
         spatial.gas.industry,
@@ -3808,7 +3832,7 @@ def add_industry(n, costs):
         bus0=spatial.methanol.nodes,
         bus1=spatial.gas.industry,
         bus2="co2 atmosphere",
-        carrier="industry methanol",
+        carrier="methanol for industry heat",
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
@@ -3816,13 +3840,13 @@ def add_industry(n, costs):
 
     n.add(
         "Link",
-        spatial.gas.industry_cc,
-        suffix=" (methanol)",
+        spatial.gas.industry,
+        suffix=" (methanol) CC",
         bus0=spatial.methanol.nodes,
         bus1=spatial.gas.industry,
         bus2="co2 atmosphere",
         bus3=spatial.co2.nodes,
-        carrier="industry methanol CC",
+        carrier="methanol for industry heat CC",
         p_nom_extendable=True,
         capital_cost=costs.at["cement capture", "fixed"]
         * costs.at["methanol", "CO2 intensity"],
@@ -3832,6 +3856,23 @@ def add_industry(n, costs):
         efficiency3=costs.at["methanol", "CO2 intensity"]
         * costs.at["cement capture", "capture_rate"],
         lifetime=costs.at["cement capture", "lifetime"],
+    )
+
+    # allow H2 to serve heat demand
+    n.add(
+        "Link",
+        spatial.gas.industry,
+        suffix=" (H2)",
+        bus0=spatial.h2.nodes,
+        bus1=spatial.gas.industry,
+        carrier="H2 for industry heat",
+        p_nom_extendable=True,
+        efficiency=1.0,
+        marginal_cost=(
+            options["gas_distribution_cost"]
+            if options.get("H2_distribution_cost", False)
+            else 0
+        ),
     )
 
     n.add(
@@ -5176,7 +5217,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="no_gas",
+            run="base",
         )
 
     configure_logging(snakemake)
