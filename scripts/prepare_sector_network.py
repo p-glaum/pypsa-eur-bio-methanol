@@ -840,6 +840,11 @@ def add_allam_gas(n, costs):
 
     nodes = pop_layout.index
 
+    marginal_cost = costs.at["allam", "VOM"] * costs.at["allam", "efficiency"]
+
+    if options.get("gas_distribution_cost", False):
+        marginal_cost += options["gas_distribution_cost"]
+
     n.add(
         "Link",
         nodes,
@@ -851,7 +856,7 @@ def add_allam_gas(n, costs):
         carrier="allam gas",
         p_nom_extendable=True,
         capital_cost=costs.at["allam", "fixed"] * costs.at["allam", "efficiency"],
-        marginal_cost=costs.at["allam", "VOM"] * costs.at["allam", "efficiency"],
+        marginal_cost=marginal_cost,
         efficiency=costs.at["allam", "efficiency"],
         efficiency2=0.98 * costs.at["gas", "CO2 intensity"],
         efficiency3=0.02 * costs.at["gas", "CO2 intensity"],
@@ -1236,14 +1241,25 @@ def add_generation(n, costs):
 
         add_carrier_buses(n, carrier, carrier_nodes)
 
+        marginal_cost = (
+            costs.at[generator, "efficiency"] * costs.at[generator, "VOM"]
+        )  # NB: VOM is per MWel
+
+        # add distribution costs from config for gas
+        if carrier == "gas":
+            marginal_cost += (
+                options["gas_distribution_cost"]
+                if options.get("gas_distribution_cost", False)
+                else 0
+            )
+
         n.add(
             "Link",
             nodes + " " + generator,
             bus0=carrier_nodes,
             bus1=nodes,
             bus2="co2 atmosphere",
-            marginal_cost=costs.at[generator, "efficiency"]
-            * costs.at[generator, "VOM"],  # NB: VOM is per MWel
+            marginal_cost=marginal_cost,
             capital_cost=costs.at[generator, "efficiency"]
             * costs.at[generator, "fixed"],  # NB: fixed cost is per MWel
             p_nom_extendable=True,
@@ -1276,6 +1292,17 @@ def add_ammonia(n, costs):
         "Bus", spatial.ammonia.nodes, location=spatial.ammonia.locations, carrier="NH3"
     )
 
+    marginal_cost = (
+        costs.at["Haber-Bosch", "VOM"] / costs.at["Haber-Bosch", "electricity-input"]
+    )
+
+    if no_relocation:
+        marginal_cost += (
+            options["H2_distribution_cost"]
+            if options.get("H2_distribution_cost", False)
+            else 0
+        )
+
     n.add(
         "Link",
         nodes,
@@ -1292,8 +1319,7 @@ def add_ammonia(n, costs):
         / costs.at["Haber-Bosch", "electricity-input"],
         capital_cost=costs.at["Haber-Bosch", "fixed"]
         / costs.at["Haber-Bosch", "electricity-input"],
-        marginal_cost=costs.at["Haber-Bosch", "VOM"]
-        / costs.at["Haber-Bosch", "electricity-input"],
+        marginal_cost=marginal_cost,
         lifetime=costs.at["Haber-Bosch", "lifetime"],
     )
 
@@ -1836,6 +1862,26 @@ def add_storage_and_grids(n, costs):
             lifetime=costs.at["coal", "lifetime"],
         )
 
+    if options["SMR"]:
+        n.add(
+            "Link",
+            nodes + " SMR",
+            bus0=spatial.gas.nodes,
+            bus1=nodes + " H2",
+            bus2="co2 atmosphere",
+            p_nom_extendable=True,
+            carrier="SMR",
+            efficiency=costs.at["SMR", "efficiency"],
+            efficiency2=costs.at["gas", "CO2 intensity"],
+            capital_cost=costs.at["SMR", "fixed"],
+            lifetime=costs.at["SMR", "lifetime"],
+            marginal_cost=(
+                options["gas_distribution_cost"]
+                if options.get("gas_distribution_cost", False)
+                else 0
+            ),
+        )
+
     if options["SMR_cc"]:
         n.add(
             "Link",
@@ -1852,21 +1898,11 @@ def add_storage_and_grids(n, costs):
             efficiency3=costs.at["gas", "CO2 intensity"] * options["cc_fraction"],
             capital_cost=costs.at["SMR CC", "fixed"],
             lifetime=costs.at["SMR CC", "lifetime"],
-        )
-
-    if options["SMR"]:
-        n.add(
-            "Link",
-            nodes + " SMR",
-            bus0=spatial.gas.nodes,
-            bus1=nodes + " H2",
-            bus2="co2 atmosphere",
-            p_nom_extendable=True,
-            carrier="SMR",
-            efficiency=costs.at["SMR", "efficiency"],
-            efficiency2=costs.at["gas", "CO2 intensity"],
-            capital_cost=costs.at["SMR", "fixed"],
-            lifetime=costs.at["SMR", "lifetime"],
+            marginal_cost=(
+                options["gas_distribution_cost"]
+                if options.get("gas_distribution_cost", False)
+                else 0
+            ),
         )
 
 
@@ -2404,6 +2440,11 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 * costs.at[key, "fixed"]
                 * overdim_factor,
                 lifetime=costs.at[key, "lifetime"],
+                marginal_cost=(
+                    options["gas_distribution_cost"]
+                    if options.get("gas_distribution_cost", False)
+                    else 0
+                ),
             )
 
         if options["solar_thermal"]:
@@ -2431,6 +2472,14 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
             fuels = options["chp"]["fuel"]
             fuels = np.atleast_1d(fuels)
             for fuel in fuels:
+                marginal_costs = costs.at[fuel, "VOM"]
+                if fuel == "gas":
+                    marginal_costs += (
+                        options["gas_distribution_cost"]
+                        if options.get("gas_distribution_cost", False)
+                        else 0
+                    )
+
                 fuel_nodes = getattr(spatial, fuel).df
                 n.add(
                     "Link",
@@ -2443,7 +2492,7 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                     p_nom_extendable=True,
                     capital_cost=costs.at["central gas CHP", "fixed"]
                     * costs.at["central gas CHP", "efficiency"],
-                    marginal_cost=costs.at["central gas CHP", "VOM"],
+                    marginal_cost=marginal_costs,
                     efficiency=costs.at["central gas CHP", "efficiency"],
                     efficiency2=costs.at["central gas CHP", "efficiency"]
                     / costs.at["central gas CHP", "c_b"],
@@ -2490,7 +2539,7 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 )
 
         if (
-            options["chp"]
+            options["chp"]["enable"]
             and options["micro_chp"]
             and heat_system.value != "urban central"
         ):
@@ -2508,6 +2557,11 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                 efficiency3=costs.at["gas", "CO2 intensity"],
                 capital_cost=costs.at["micro CHP", "fixed"],
                 lifetime=costs.at["micro CHP", "lifetime"],
+                marginal_cost=(
+                    options["gas_distribution_cost"]
+                    if options.get("gas_distribution_cost", False)
+                    else 0
+                ),
             )
 
     if options["retrofitting"]["retro_endogen"]:
@@ -3510,6 +3564,13 @@ def add_industry(n, costs):
             / electricity_input
         )
 
+        if no_relocation:
+            marginal_cost += (
+                options["H2_distribution_cost"]
+                if options.get("H2_distribution_cost", False)
+                else 0
+            )
+
         n.madd(
             "Link",
             nodes,
@@ -3709,6 +3770,11 @@ def add_industry(n, costs):
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["gas", "CO2 intensity"],
+        marginal_cost=(
+            options["gas_distribution_cost"]
+            if options.get("gas_distribution_cost", False)
+            else 0
+        ),
     )
 
     n.add(
@@ -3728,6 +3794,11 @@ def add_industry(n, costs):
         efficiency3=costs.at["gas", "CO2 intensity"]
         * costs.at["cement capture", "capture_rate"],
         lifetime=costs.at["cement capture", "lifetime"],
+        marginal_cost=(
+            options["gas_distribution_cost"]
+            if options.get("gas_distribution_cost", False)
+            else 0
+        ),
     )
     # allow methanol to serve gas demand
     n.add(
@@ -3824,6 +3895,11 @@ def add_industry(n, costs):
                 capital_cost=costs.at["H2 liquefaction", "fixed"],
                 p_nom_extendable=True,
                 lifetime=costs.at["H2 liquefaction", "lifetime"],
+                marginal_cost=(
+                    options["H2_distribution_cost"]
+                    if options.get("H2_distribution_cost", False)
+                    else 0
+                ),
             )
 
             shipping_bus = nodes + " H2 liquid"

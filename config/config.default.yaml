@@ -714,7 +714,9 @@ sector:
     electricity distribution grid:
       efficiency_static: 0.97
   H2_network: true
+  H2_distribution_cost: false
   gas_network: false
+  gas_distribution_cost: false
   import_fossil_gas: false
   gas_spatial: false
   H2_retrofit: false
