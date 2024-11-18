@@ -717,6 +717,7 @@ sector:
   H2_network: true
   H2_distribution_cost: false
   gas_network: false
+  existing_gas_storage: true
   gas_distribution_cost: false
   import_fossil_gas: false
   gas_spatial: false
