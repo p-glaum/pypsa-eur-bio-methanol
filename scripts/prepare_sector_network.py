@@ -3801,9 +3801,14 @@ def add_industry(n, costs):
         ),
     )
 
+    if len(spatial.gas.industry) > 1 or len(spatial.co2.nodes) > 1:
+        link_names_CC = nodes + " heat for industy"
+    else:
+        link_names_CC = ["heat for industry"]
+
     n.add(
         "Link",
-        spatial.gas.industry,
+        link_names_CC,
         suffix=" (gas) CC",
         bus0=spatial.gas.nodes,
         bus1=spatial.gas.industry,
@@ -3826,9 +3831,15 @@ def add_industry(n, costs):
         ),
     )
     # allow methanol to serve heat demand
+
+    if len(spatial.gas.industry) > 1 or len(spatial.methanol.nodes) > 1:
+        link_name = nodes + " heat for industry"
+    else:
+        link_name = ["heat for industry"]
+
     n.add(
         "Link",
-        spatial.gas.industry,
+        link_name,
         suffix=" (methanol)",
         bus0=spatial.methanol.nodes,
         bus1=spatial.gas.industry,
@@ -3841,7 +3852,7 @@ def add_industry(n, costs):
 
     n.add(
         "Link",
-        spatial.gas.industry,
+        link_names_CC,
         suffix=" (methanol) CC",
         bus0=spatial.methanol.nodes,
         bus1=spatial.gas.industry,
@@ -3862,7 +3873,7 @@ def add_industry(n, costs):
     # allow H2 to serve heat demand
     n.add(
         "Link",
-        spatial.gas.industry,
+        spatial.h2.locations + " heat for industry",
         suffix=" (H2)",
         bus0=spatial.h2.nodes,
         bus1=spatial.gas.industry,

@@ -1241,6 +1241,7 @@ plotting:
     services urban decentral water tanks discharger: '#bdd8d3'
     # heat demand
     Heat load: '#cc1f1f'
+    heat for industry: '#cc1f1f'
     heat: '#cc1f1f'
     heat vent: '#aa3344'
     heat demand: '#cc1f1f'
@@ -1293,6 +1294,7 @@ plotting:
     H2 for industry heat: "#d162c4"
     H2 for shipping: "#ebaee0"
     H2: '#bf13a0'
+    H2 import: '#bf13a0'
     hydrogen: '#bf13a0'
     retrofitted H2 boiler: '#e5a0d9'
     SMR: '#870c71'
