@@ -3052,7 +3052,7 @@ def add_biomass(n, costs):
         efficiency = (
             1 / 0.78
         )  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
-        efficiency2 = -0.76 * 1 / 0.78  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
+        efficiency2 = 0.76 * 1 / 0.78  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
         # from fig.4.1 paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
         carbon_efficiency = 0.93
         capital_cost = costs.at["biogas", "fixed"]
@@ -3068,9 +3068,8 @@ def add_biomass(n, costs):
             bus2=spatial.nodes,
             bus3="co2 atmosphere",
             efficiency=efficiency,
-            efficiency2=efficiency2,
-            efficiency3=-carbon_efficiency
-            * efficiency
+            efficiency2=-efficiency2,
+            efficiency3=-efficiency
             * costs.at["methanolisation", "carbondioxide-input"],
             carrier="biogas-to-methanol",
             capital_cost=capital_cost,
