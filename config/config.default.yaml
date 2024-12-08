@@ -699,6 +699,8 @@ sector:
   use_methanation_waste_heat: 0.25
   use_fuel_cell_waste_heat: 0.25
   use_electrolysis_waste_heat: 0.25
+  use_MtK_waste_heat: 0.25
+  use_MtG_waste_heat: 0.25
   electricity_transmission_grid: true
   electricity_distribution_grid: true
   electricity_grid_connection: true

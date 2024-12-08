@@ -4694,6 +4694,24 @@ def add_waste_heat(n):
                 0.95 - n.links.loc[urban_central + " H2 Fuel Cell", "efficiency"]
             ) * options["use_fuel_cell_waste_heat"]
 
+        if options["use_MtK_waste_heat"] and "methanol-to-kerosene" in link_carriers:
+            n.links.loc[urban_central + " methanol-to-kerosene", "bus4"] = (
+                urban_central + " urban central heat"
+            )
+            n.links.loc[urban_central + " methanol-to-kerosene", "efficiency4"] = (
+                0.03056  # TODO: add to technology data using same source as for other efficiencies
+                / costs.at["methanol-to-kerosene", "methanol-input"]
+            ) * options["use_MtK_waste_heat"]
+
+        if options["use_MtG_waste_heat"] and "methanol-to-gasoline" in link_carriers:
+            n.links.loc[urban_central + " methanol-to-gasoline", "bus4"] = (
+                urban_central + " urban central heat"
+            )
+            n.links.loc[urban_central + " methanol-to-gasoline", "efficiency4"] = (
+                0.03056  # TODO: add to technology data using same source as for other efficiencies
+                / costs.at["methanol-to-kerosene", "methanol-input"]
+            ) * options["methanol-to-gasoline"]
+
 
 def add_agriculture(n, costs):
     logger.info("Add agriculture, forestry and fishing sector.")
@@ -5202,7 +5220,7 @@ def add_enhanced_geothermal(n, egs_potentials, egs_overlap, costs):
                 p_nom_extendable=True,
                 lifetime=costs.at["geothermal", "lifetime"],
             )
-        elif as_chp and not bus + " urban central heat" in n.buses.index:
+        elif as_chp and bus + " urban central heat" not in n.buses.index:
             n.links.at[bus + " geothermal organic rankine cycle", "efficiency"] = (
                 efficiency_orc
             )
