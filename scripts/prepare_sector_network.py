@@ -4143,16 +4143,16 @@ def add_industry(n, costs):
         unit="MWh_LHV",
     )
 
-    refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
+    cracking_losses = 0.1  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
     n.add(
         "Link",
         spatial.oil.naphtha,
         bus0=spatial.oil.nodes,
         bus1=spatial.oil.naphtha,
         bus2="co2 atmosphere",
-        carrier="naphtha for industry",
-        efficiency=1 - refining_losses,
-        efficiency2=costs.at["oil", "CO2 intensity"] * refining_losses,
+        carrier="oil cracking",
+        efficiency=1 - cracking_losses,
+        efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
     )
 
     n.add(
@@ -4429,7 +4429,7 @@ def add_industry(n, costs):
         p_set=p_set,
     )
 
-    refining_losses = 0.07  # 7% energy loss due to refining https://www.concawe.eu/wp-content/uploads/rpt_12-03-2012-01520-01-e.pdf
+    cracking_losses = 0.1  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
 
     n.add(
         "Link",
@@ -4437,10 +4437,10 @@ def add_industry(n, costs):
         bus0=spatial.oil.nodes,
         bus1=spatial.oil.kerosene,
         bus2="co2 atmosphere",
-        carrier="oil-to-kerosene",
+        carrier="oil cracking",
         p_nom_extendable=True,
-        efficiency=1 - refining_losses,
-        efficiency2=costs.at["oil", "CO2 intensity"] * refining_losses,
+        efficiency=1 - cracking_losses,
+        efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
     )
 
     n.add(
