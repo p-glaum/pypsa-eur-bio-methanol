@@ -4326,11 +4326,14 @@ def add_industry(n, costs):
         naphtha_per_t_hvc = 12.622  # MWh per tonne of HVC (taken from sector ratios)
 
         # set to not allow industry reallocation
-        p_nom = (
-            industrial_demand.loc[nodes, "naphtha"].groupby("node").sum()
-            / naphtha_per_t_hvc
-            / nhours
-        )
+        if not options.get("relocation_HVC", False):
+            p_nom = (
+                industrial_demand.loc[nodes, "naphtha"].groupby("node").sum()
+                / naphtha_per_t_hvc
+                / nhours
+            )
+        else:
+            p_nom = 0
 
         process_emissions = (
             costs.at[tech, "carbondioxide-output"] / costs.at[tech, "methanol-input"]

@@ -684,6 +684,7 @@ sector:
     biogas_to_methanol: false
   ammonia: false
   relocation_ammonia: false
+  relocation_HVC: false
   endogenous_steel: false
   relocation_steel: false
   HBI_import: false   # in €/t
