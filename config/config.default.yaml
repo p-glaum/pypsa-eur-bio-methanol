@@ -719,7 +719,8 @@ sector:
   gas_network: false
   existing_gas_storage: true
   gas_distribution_cost: false
-  import_fossil_gas: false
+  import_fossil_oil: true
+  import_fossil_gas: true
   gas_spatial: false
   H2_retrofit: false
   H2_retrofit_capacity_per_CH4: 0.6

@@ -597,35 +597,47 @@ def add_carrier_buses(n, carrier, nodes=None):
         suffix = " import"
         bus_suffix = ""
 
-        if carrier == "oil" and cf_industry["oil_refining_emissions"] > 0:
+        if (
+            carrier == "oil"
+            and cf_industry["oil_refining_emissions"] > 0
+            and options["import_fossil_oil"]
+        ):
 
             n.add(
                 "Bus",
-                nodes + " primary",
-                location=location,
+                "oil primary",
+                location="EU",
                 carrier=carrier + " primary",
                 unit=unit,
             )
 
             n.add(
-                "Link",
-                nodes + " refining",
-                bus0=nodes + " primary",
-                bus1=nodes,
-                bus2="co2 atmosphere",
-                location=location,
-                carrier=carrier + " refining",
-                p_nom=1e6,
-                efficiency=1
-                - (
-                    cf_industry["oil_refining_emissions"]
-                    / costs.at[carrier, "CO2 intensity"]
-                ),
-                efficiency2=cf_industry["oil_refining_emissions"],
+                "Generator",
+                "oil primary import",
+                bus="oil primary",
+                p_nom_extendable=True,
+                carrier="oil primary import",
+                marginal_cost=fuel_price,
             )
 
-            suffix = " primary"
-            bus_suffix = " primary"
+            n.add(
+                "Link",
+                nodes + " refining",
+                bus0="oil primary",
+                bus1=spatial.oil.naphtha,  # OMV from https://www.statista.com/statistics/685062/yield-structure-central-european-refineries/, heavy oil is split among kerosene, diesel and naphtha
+                bus2=spatial.oil.kerosene,
+                bus3=spatial.oil.nodes,
+                bus4="co2 atmosphere",
+                efficiency=0.214,  # 18+18/(18+35+15+6)*14=21.4,
+                efficiency2=0.071,  # 6+6/74*14=7.4,
+                efficiency3=0.595,  # (35+15)+50/74*14=43,
+                efficiency4=0.12
+                * costs.at["oil", "CO2 intensity"],  # own consumption of oil refining
+                location=location,
+                carrier="oil primary refining",
+                p_nom=1e6,
+            )
+            return
 
         if carrier == "gas" and not (
             options["gas_network"] and options["import_fossil_gas"]
