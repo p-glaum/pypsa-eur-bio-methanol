@@ -25,7 +25,9 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     version = snakemake.params.version
-    if "/" in version:
+    if "https" in version:
+        baseurl = version
+    elif "/" in version:
         baseurl = f"https://raw.githubusercontent.com/{version}/outputs/"
     else:
         baseurl = f"https://raw.githubusercontent.com/PyPSA/technology-data/{version}/outputs/"
