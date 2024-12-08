@@ -476,6 +476,7 @@ def add_green_fuel_imports(n, options):
     for fuel in import_options.get("fuel", []):
         if fuel not in n.buses.carrier.unique():
             continue
+        unit = "MWh_th"
         co2_content = costs.get("CO2 intensity").get(fuel, 0)
         upstream_emissions = import_options["upstream_emissions"].get(fuel, 0)
         fuel_price = import_options["price"][fuel]
@@ -485,7 +486,39 @@ def add_green_fuel_imports(n, options):
         if fuel == "NH3":
             fuel = "ammonia"
         fuel_nodes = getattr(spatial, fuel.lower()).nodes
-        if co2_content - upstream_emissions > 0:
+        if fuel == "oil":
+            n.add(
+                "Bus",
+                "FT import",
+                carrier="FT oil",
+                location="EU",
+                unit=unit,
+            )
+            n.add(
+                "Generator",
+                "FT import",
+                bus="FT import",
+                carrier="FT import",
+                marginal_cost=fuel_price,
+                p_nom_extendable=True,
+            )
+            n.add(
+                "Link",
+                spatial.oil.nodes,
+                suffix=" Fischer-Tropsch",
+                bus0="FT import",
+                bus1=spatial.oil.naphtha,
+                bus2=spatial.oil.kerosene,
+                bus3=spatial.oil.nodes,
+                bus4="co2 atmosphere",
+                carrier="FT import",
+                efficiency=0.3,  # fraction naphtha
+                efficiency2=0.4,  # fraction kerosene
+                efficiency3=0.3,  # fraction diesel
+                efficiency4=-(costs.at["oil", "CO2 intensity"] - upstream_emissions),
+                p_nom_extendable=True,
+            )
+        elif co2_content - upstream_emissions > 0:
             n.add(
                 "Bus",
                 fuel + " import",
@@ -493,6 +526,7 @@ def add_green_fuel_imports(n, options):
                 marginal_cost=fuel_price,
                 p_nom_extendable=True,
                 location="EU",
+                unit=unit,
             )
             n.add(
                 "Generator",

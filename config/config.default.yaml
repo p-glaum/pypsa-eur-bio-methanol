@@ -1144,9 +1144,11 @@ plotting:
     gas pipeline new: '#a87c62'
     # oil
     oil: '#c9c9c9'
-    oil import: '#c9c9c9' # this is FT
+    FT import: '#a8d5a8'
     oil primary: '#d2d2d2'
-    oil refining: '#e6e6e6'
+    oil primary import: '#d2d2d2'
+    oil primary refining: '#e6e6e6'
+    oil cracking: '#e6e6e6'
     imported oil: '#a3a3a3'
     oil boiler: '#adadad'
     residential rural oil boiler: '#a9a9a9'
@@ -1400,6 +1402,7 @@ plotting:
     waste CHP: '#e3d37d'
     waste CHP CC: '#e3d3ff'
     HVC to air: 'k'
+    non-sequestered HVC: 'k'
     steel: '#b1bbc9'
     DRI: '#b1bbc9'
     EAF: '#b1bba1'
