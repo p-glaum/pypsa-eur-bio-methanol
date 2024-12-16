@@ -461,6 +461,16 @@ sector:
       methanol: 140
       NH3: 110
       oil: 140
+  fuel_exports:
+    enable: false
+    fuel:
+    - oil
+    - kerosene
+    - naphtha
+    price:
+      oil: 58
+      kerosene: 54
+      naphtha: 48
   district_heating:
     potential: 0.6
     progress:
@@ -723,6 +733,7 @@ sector:
   existing_gas_storage: true
   gas_distribution_cost: false
   import_fossil_oil: true
+  oil_cracking: false # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
   import_fossil_gas: true
   gas_spatial: false
   H2_retrofit: false
@@ -1131,6 +1142,7 @@ plotting:
     urban central gas boiler: '#b0904f'
     gas: '#e05b09'
     fossil gas: '#e05b09'
+    gas import: '#e05b09'
     natural gas: '#e05b09'
     biogas to gas: '#e36311'
     biogas to gas CC: '#e51245'
@@ -1145,6 +1157,7 @@ plotting:
     gas pipeline new: '#a87c62'
     # oil
     oil: '#c9c9c9'
+    oil export: '#c9c9c9'
     FT import: '#a8d5a8'
     oil primary: '#d2d2d2'
     oil primary import: '#d2d2d2'
@@ -1330,13 +1343,16 @@ plotting:
     methane: '#c44ce6'
     # synfuels
     Fischer-Tropsch: '#25c49a'
+    FT oil: '#25c49a'
     liquid: '#25c49a'
     oil-to-kerosene: '#91e6d6'
     kerosene: '#91e6d6'
+    kerosene export: '#91e6d6'
     kerosene for aviation: '#a1ffe6'
     naphtha for industry: '#57ebc4'
     HVC for industry: '#57ebc4'
     naphtha: '#57ebc4'
+    naphtha export: '#57ebc4'
     naphtha-to-HVC: '#57ebc4'
     methanol-to-kerosene: '#C98468'
     methanol-to-gasoline: '#afafaf'

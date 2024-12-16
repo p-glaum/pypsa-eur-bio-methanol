@@ -573,6 +573,33 @@ def add_green_fuel_imports(n, options):
             )
 
 
+def add_fuel_exports(n, options):
+    """
+    Add fuel export options to the network.
+    """
+    export_options = options.get("fuel_exports", {})
+    for fuel in export_options.get("fuel", []):
+        fuel_price = export_options["price"][fuel]
+        logging.info(f"Adding export of {fuel} with price of {fuel_price} EUR/MWh.")
+        if fuel not in n.buses.carrier.unique():
+            continue
+        if fuel == "naphtha" or fuel == "kerosene":
+            fuel_nodes = getattr(spatial.oil, fuel)
+        else:
+            fuel_nodes = getattr(spatial, fuel.lower()).nodes
+        fuel_nodes = fuel_nodes[0] if len(fuel_nodes) == 1 else fuel_nodes
+        n.add(
+            "Generator",
+            fuel_nodes + " export",
+            bus=fuel_nodes,
+            carrier=fuel + " export",
+            marginal_cost=fuel_price,
+            p_max_pu=0,
+            p_min_pu=-1,
+            p_nom_extendable=True,
+        )
+
+
 def add_carrier_buses(n, carrier, nodes=None):
     """
     Add buses to connect e.g. coal, nuclear and oil plants.
@@ -1715,7 +1742,7 @@ def add_storage_and_grids(n, costs):
         gas_input_nodes = pd.read_csv(fn, index_col=0)
 
         unique = gas_input_nodes.index.unique()
-        gas_i = n.generators.carrier == "gas"
+        gas_i = n.generators.carrier == "gas import"
         internal_i = ~n.generators.bus.map(n.buses.location).isin(unique)
 
         remove_i = n.generators[gas_i & internal_i].index
@@ -3926,7 +3953,7 @@ def add_industry(n, costs):
         p_nom_extendable=True,
         efficiency=1.0,
         marginal_cost=(
-            options["gas_distribution_cost"]
+            options["H2_distribution_cost"]
             if options.get("H2_distribution_cost", False)
             else 0
         ),
@@ -4143,17 +4170,20 @@ def add_industry(n, costs):
         unit="MWh_LHV",
     )
 
-    cracking_losses = 0.1  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
-    n.add(
-        "Link",
-        spatial.oil.naphtha,
-        bus0=spatial.oil.nodes,
-        bus1=spatial.oil.naphtha,
-        bus2="co2 atmosphere",
-        carrier="oil cracking",
-        efficiency=1 - cracking_losses,
-        efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
-    )
+    if options["oil_cracking"]:
+        cracking_losses = options[
+            "oil_cracking"
+        ]  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
+        n.add(
+            "Link",
+            spatial.oil.naphtha,
+            bus0=spatial.oil.nodes,
+            bus1=spatial.oil.naphtha,
+            bus2="co2 atmosphere",
+            carrier="oil cracking",
+            efficiency=1 - cracking_losses,
+            efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
+        )
 
     n.add(
         "Bus",
@@ -4432,19 +4462,22 @@ def add_industry(n, costs):
         p_set=p_set,
     )
 
-    cracking_losses = 0.1  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
+    if options["oil_cracking"]:
+        cracking_losses = options[
+            "oil_cracking"
+        ]  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
 
-    n.add(
-        "Link",
-        spatial.oil.kerosene,
-        bus0=spatial.oil.nodes,
-        bus1=spatial.oil.kerosene,
-        bus2="co2 atmosphere",
-        carrier="oil cracking",
-        p_nom_extendable=True,
-        efficiency=1 - cracking_losses,
-        efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
-    )
+        n.add(
+            "Link",
+            spatial.oil.kerosene,
+            bus0=spatial.oil.nodes,
+            bus1=spatial.oil.kerosene,
+            bus2="co2 atmosphere",
+            carrier="oil cracking",
+            p_nom_extendable=True,
+            efficiency=1 - cracking_losses,
+            efficiency2=costs.at["oil", "CO2 intensity"] * cracking_losses,
+        )
 
     n.add(
         "Link",
@@ -5476,7 +5509,10 @@ if __name__ == "__main__":
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
-    add_green_fuel_imports(n, options)
+    if options["fuel_imports"]["enable"]:
+        add_green_fuel_imports(n, options)
+    if options["fuel_exports"]["enable"]:
+        add_fuel_exports(n, options)
 
     sanitize_carriers(n, snakemake.config)
     sanitize_locations(n)
