@@ -688,9 +688,9 @@ sector:
       ccgt_cc: false
       ocgt: false
       allam: false
+    force_methanol_to_industry_heat: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
-    replace_gas_demand_with_methanol: false
     biogas_to_methanol: false
   ammonia: false
   relocation_ammonia: false
