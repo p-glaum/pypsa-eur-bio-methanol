@@ -1724,7 +1724,9 @@ def add_storage_and_grids(n, costs):
             bus0=gas_pipes.bus0 + " gas",
             bus1=gas_pipes.bus1 + " gas",
             p_min_pu=gas_pipes.p_min_pu,
-            p_nom=gas_pipes.p_nom,
+            p_nom=(
+                gas_pipes.p_nom if options["existing_gas_pipeline_capacities"] else 0.0
+            ),
             p_nom_extendable=gas_pipes.p_nom_extendable,
             p_nom_max=gas_pipes.p_nom_max,
             p_nom_min=gas_pipes.p_nom_min,
@@ -1754,7 +1756,7 @@ def add_storage_and_grids(n, costs):
         n.generators.loc[gas_i, "p_nom"] = p_nom
 
         # add existing gas storage capacity
-        if options["existing_gas_storage"]:
+        if options["existing_gas_storage_capacities"]:
             gas_i = n.stores.carrier == "gas"
             e_nom = (
                 gas_input_nodes["storage"]
@@ -1766,7 +1768,7 @@ def add_storage_and_grids(n, costs):
             e_nom.clip(
                 upper=e_nom.quantile(0.98), inplace=True
             )  # limit extremely large storage
-            n.stores.loc[gas_i, "e_nom_min"] = e_nom
+            n.stores.loc[gas_i, "e_nom"] = e_nom
 
         # add candidates for new gas pipelines to achieve full connectivity
 

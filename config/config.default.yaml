@@ -730,7 +730,8 @@ sector:
   H2_network: true
   H2_distribution_cost: false
   gas_network: false
-  existing_gas_storage: true
+  existing_gas_pipeline_capacities: true
+  existing_gas_storage_capacities: true
   gas_distribution_cost: false
   import_fossil_oil: true
   oil_cracking: false # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
