@@ -992,6 +992,10 @@ def add_methanol_to_power(n, costs, types=None):
     if types["allam"]:
         logger.info("Adding Allam cycle methanol power plants.")
 
+        marginal_cost = costs.at["allam", "VOM"] * costs.at["allam", "efficiency"]
+        if options.get("methanol_distribution_cost", False):
+            marginal_cost += options["methanol_distribution_cost"]
+
         n.add(
             "Link",
             nodes,
@@ -1003,7 +1007,7 @@ def add_methanol_to_power(n, costs, types=None):
             carrier="allam methanol",
             p_nom_extendable=True,
             capital_cost=costs.at["allam", "fixed"] * costs.at["allam", "efficiency"],
-            marginal_cost=costs.at["allam", "VOM"] * costs.at["allam", "efficiency"],
+            marginal_cost=marginal_cost,
             efficiency=costs.at["allam", "efficiency"],
             efficiency2=0.98 * costs.at["methanolisation", "carbondioxide-input"],
             efficiency3=0.02 * costs.at["methanolisation", "carbondioxide-input"],
@@ -1016,6 +1020,10 @@ def add_methanol_to_power(n, costs, types=None):
         # efficiency * EUR/MW * (annuity + FOM)
         capital_cost = costs.at["CCGT", "efficiency"] * costs.at["CCGT", "fixed"]
 
+        marginal_cost = costs.at["CCGT", "VOM"]
+        if options.get("methanol_distribution_cost", False):
+            marginal_cost += options["methanol_distribution_cost"]
+
         n.add(
             "Link",
             nodes,
@@ -1026,7 +1034,7 @@ def add_methanol_to_power(n, costs, types=None):
             carrier="CCGT methanol",
             p_nom_extendable=True,
             capital_cost=capital_cost,
-            marginal_cost=costs.at["CCGT", "VOM"],
+            marginal_cost=marginal_cost,
             efficiency=costs.at["CCGT", "efficiency"],
             efficiency2=costs.at["methanolisation", "carbondioxide-input"],
             lifetime=costs.at["CCGT", "lifetime"],
@@ -1048,6 +1056,10 @@ def add_methanol_to_power(n, costs, types=None):
             * costs.at["methanolisation", "carbondioxide-input"]
         )
 
+        marginal_cost = costs.at["CCGT", "VOM"]
+        if options.get("methanol_distribution_cost", False):
+            marginal_cost += options["methanol_distribution_cost"]
+
         n.add(
             "Link",
             nodes,
@@ -1059,7 +1071,7 @@ def add_methanol_to_power(n, costs, types=None):
             carrier="CCGT methanol CC",
             p_nom_extendable=True,
             capital_cost=capital_cost_cc,
-            marginal_cost=costs.at["CCGT", "VOM"],
+            marginal_cost=marginal_cost,
             efficiency=costs.at["CCGT", "efficiency"],
             efficiency2=costs.at["cement capture", "capture_rate"]
             * costs.at["methanolisation", "carbondioxide-input"],
@@ -1070,6 +1082,10 @@ def add_methanol_to_power(n, costs, types=None):
 
     if types["ocgt"]:
         logger.info("Adding methanol OCGT power plants.")
+
+        marginal_cost = costs.at["OCGT", "VOM"] * costs.at["OCGT", "efficiency"]
+        if options.get("methanol_distribution_cost", False):
+            marginal_cost += options["methanol_distribution_cost"]
 
         n.add(
             "Link",
@@ -1978,6 +1994,63 @@ def add_storage_and_grids(n, costs):
                 if options.get("gas_distribution_cost", False)
                 else 0
             ),
+        )
+
+    if options["grey_methanol"]:
+        capital_cost = (
+            costs.at["SMR", "fixed"]
+            + costs.at["methanolisation", "fixed"]
+            * costs.at["grey methanol synthesis", "efficiency"]
+        )
+        co2_emissions = (
+            costs.at["gas", "CO2 intensity"]
+            - costs.at["grey methanol synthesis", "efficiency"]
+            * costs.at["methanol", "CO2 intensity"]
+        )
+        n.add(
+            "Link",
+            spatial.gas.locations,
+            suffix=" grey methanol",
+            bus0=spatial.gas.nodes,
+            bus1=spatial.methanol.nodes,
+            bus2="co2 atmosphere",
+            p_nom_extendable=True,
+            carrier="grey methanol",
+            efficiency=costs.at["grey methanol synthesis", "efficiency"],
+            efficiency2=co2_emissions,
+            capital_cost=capital_cost,
+            lifetime=costs.at["SMR", "lifetime"],
+        )
+
+    if options["blue_methanol"]:
+        co2_emissions = (
+            costs.at["gas", "CO2 intensity"]
+            - costs.at["methanolisation", "efficiency"]
+            * costs.at["methanol", "CO2 intensity"]
+        )
+        capital_cost = (
+            costs.at["SMR", "fixed"]
+            + costs.at["methanolisation", "fixed"]
+            * costs.at["grey methanol synthesis", "efficiency"]
+            + costs.at["cement capture", "fixed"]
+            * co2_emissions
+            * options["cc_fraction"]
+        )
+        n.add(
+            "Link",
+            spatial.gas.locations,
+            suffix=" blue methanol",
+            bus0=spatial.gas.nodes,
+            bus1=spatial.methanol.nodes,
+            bus2="co2 atmosphere",
+            bus3=spatial.co2.nodes,
+            p_nom_extendable=True,
+            carrier="blue methanol",
+            efficiency=costs.at["grey methanol synthesis", "efficiency"],
+            efficiency2=co2_emissions * (1 - options["cc_fraction"]),
+            efficiency3=co2_emissions * options["cc_fraction"],
+            capital_cost=capital_cost,
+            lifetime=costs.at["SMR", "lifetime"],
         )
 
 
@@ -3932,6 +4005,11 @@ def add_industry(n, costs):
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
+        marginal_cost=(
+            options["methanol_distribution_cost"]
+            if options["methanol_distribution_cost"]
+            else 0
+        ),
     )
 
     n.add(
@@ -3952,9 +4030,14 @@ def add_industry(n, costs):
         efficiency3=costs.at["methanol", "CO2 intensity"]
         * costs.at["cement capture", "capture_rate"],
         lifetime=costs.at["cement capture", "lifetime"],
+        marginal_cost=(
+            options["methanol_distribution_cost"]
+            if options["methanol_distribution_cost"]
+            else 0
+        ),
     )
 
-    if options["methanol"]["force_biomass_to_methanol"]:
+    if options["methanol"]["force_methanol_to_industry_heat"]:
         # allow H2 to serve heat demand
         n.add(
             "Link",
