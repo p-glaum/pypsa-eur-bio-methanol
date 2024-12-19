@@ -1372,6 +1372,8 @@ plotting:
     CCGT methanol CC: '#B98F76'
     OCGT methanol: '#B98F76'
     methanol: '#FF7B00'
+    grey methanol: '#CC6600'
+    blue methanol: '#FF8C1A'
     methanol import: '#FF7B00'
     methanol transport: '#FF7B00'
     shipping methanol: '#468c8b'
