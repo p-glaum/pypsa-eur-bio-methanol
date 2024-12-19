@@ -1732,7 +1732,9 @@ def add_storage_and_grids(n, costs):
             gas_pipes["capital_cost"] = (
                 gas_pipes.length * costs.at["CH4 (g) pipeline", "fixed"]
             )
-            gas_pipes["p_nom_extendable"] = False
+            gas_pipes["p_nom_extendable"] = not options[
+                "existing_gas_pipeline_capacities"
+            ]
 
         n.add(
             "Link",
@@ -1767,7 +1769,9 @@ def add_storage_and_grids(n, costs):
         n.generators.drop(remove_i, inplace=True)
 
         input_types = ["lng", "pipeline", "production"]
-        p_nom = gas_input_nodes[input_types].sum(axis=1).rename(lambda x: x + " gas")
+        p_nom = (
+            gas_input_nodes[input_types].sum(axis=1).rename(lambda x: x + " gas import")
+        )
         n.generators.loc[gas_i, "p_nom_extendable"] = False
         n.generators.loc[gas_i, "p_nom"] = p_nom
 
