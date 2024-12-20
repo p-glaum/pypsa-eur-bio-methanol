@@ -3782,7 +3782,7 @@ def add_industry(n, costs):
             / electricity_input,
         )
 
-    if not options["methanol"]["force_methanol_to_industry_heat"]:
+    if not options["methanol"]["force_industry_heat"]:
         n.madd(
             "Bus",
             spatial.biomass.industry,
@@ -3922,7 +3922,7 @@ def add_industry(n, costs):
         / nhours
     )
 
-    if options["methanol"]["force_methanol_to_industry_heat"]:
+    if options["methanol"]["force_industry_heat"]:
         heat_demand = +(
             industrial_demand.loc[sectors_b, "solid biomass"].groupby("node").sum()
             / nhours
@@ -3943,7 +3943,12 @@ def add_industry(n, costs):
         p_set=spatial_heat_demand,
     )
 
-    if not options["methanol"]["force_methanol_to_industry_heat"]:
+    if len(spatial.gas.industry) > 1 or len(spatial.co2.nodes) > 1:
+        link_names_CC = nodes + " heat for industy"
+    else:
+        link_names_CC = ["heat for industry"]
+
+    if not options["methanol"]["force_industry_heat"]:
         n.add(
             "Link",
             spatial.gas.industry,
@@ -3961,11 +3966,6 @@ def add_industry(n, costs):
                 else 0
             ),
         )
-
-        if len(spatial.gas.industry) > 1 or len(spatial.co2.nodes) > 1:
-            link_names_CC = nodes + " heat for industy"
-        else:
-            link_names_CC = ["heat for industry"]
 
         n.add(
             "Link",
@@ -4041,7 +4041,7 @@ def add_industry(n, costs):
         ),
     )
 
-    if options["methanol"]["force_methanol_to_industry_heat"]:
+    if not options["methanol"]["force_industry_heat"]:
         # allow H2 to serve heat demand
         n.add(
             "Link",
@@ -5428,7 +5428,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="base",
+            run="methanol_only",
         )
 
     configure_logging(snakemake)

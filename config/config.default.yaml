@@ -690,7 +690,7 @@ sector:
       ccgt_cc: false
       ocgt: false
       allam: false
-    force_methanol_to_industry_heat: false
+    force_industry_heat: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
     biogas_to_methanol: false
