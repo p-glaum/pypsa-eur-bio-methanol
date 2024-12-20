@@ -2029,7 +2029,7 @@ def add_storage_and_grids(n, costs):
     if options["blue_methanol"]:
         co2_emissions = (
             costs.at["gas", "CO2 intensity"]
-            - costs.at["methanolisation", "efficiency"]
+            - costs.at["grey methanol synthesis", "efficiency"]
             * costs.at["methanol", "CO2 intensity"]
         )
         capital_cost = (
@@ -3782,7 +3782,7 @@ def add_industry(n, costs):
             / electricity_input,
         )
 
-    if not options["methanol"]["force_industry_heat"]:
+    if not options["methanol"]["replace_industry_biomass"]:
         n.madd(
             "Bus",
             spatial.biomass.industry,
@@ -3922,7 +3922,7 @@ def add_industry(n, costs):
         / nhours
     )
 
-    if options["methanol"]["force_industry_heat"]:
+    if options["methanol"]["replace_industry_biomass"]:
         heat_demand = +(
             industrial_demand.loc[sectors_b, "solid biomass"].groupby("node").sum()
             / nhours
@@ -5428,7 +5428,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="methanol_only",
+            run="base",
         )
 
     configure_logging(snakemake)
