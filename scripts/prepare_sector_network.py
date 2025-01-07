@@ -2631,6 +2631,12 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
                         if options.get("gas_distribution_cost", False)
                         else 0
                     )
+                elif fuel == "methanol":
+                    marginal_costs += (
+                        options["methanol_distribution_cost"]
+                        if options.get("methanol_distribution_cost", False)
+                        else 0
+                    )
 
                 fuel_nodes = getattr(spatial, fuel).df
                 n.add(
