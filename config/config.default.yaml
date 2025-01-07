@@ -692,6 +692,8 @@ sector:
       allam: false
     force_industry_heat: false
     replace_industry_biomass: false
+    endogeneous_industry_biomass: false
+    enhanced_biomass_to_methanol: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
     biogas_to_methanol: false
@@ -1367,6 +1369,7 @@ plotting:
     methanolisation: '#00FFBF'
     biomass-to-methanol: '#EAD28A'
     biomass-to-methanol CC: '#EADBAD'
+    enhanced-biomass-to-methanol: '#EAD2F5'
     biogas-to-methanol: '#EAD28A'
     allam methanol: '#B98F76'
     CCGT methanol: '#B98F76'

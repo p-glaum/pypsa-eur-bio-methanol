@@ -982,6 +982,29 @@ def add_biomass_to_methanol_cc(n, costs):
     )
 
 
+def add_enhanced_biomass_to_methanol(n, costs):
+
+    n.add(
+        "Link",
+        spatial.biomass.nodes,
+        suffix=" enhanced-biomass-to-methanol",
+        bus0=spatial.biomass.nodes,
+        bus1=spatial.methanol.nodes,
+        bus2=spatial.h2.nodes,
+        bus3="co2 atmosphere",
+        carrier="enhanced-biomass-to-methanol",
+        lifetime=costs.at["biomass-to-methanol", "lifetime"],
+        efficiency=costs.at["enhanced-biomass-to-methanol", "efficiency"],
+        efficiency2=-costs.at["enhanced-biomass-to-methanol", "hydrogen-input"],
+        efficiency3=-costs.at["solid biomass", "CO2 intensity"],
+        p_nom_extendable=True,
+        capital_cost=costs.at["biomass-to-methanol", "fixed"]
+        * costs.at["biomass-to-methanol", "efficiency"],
+        marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
+        * costs.at["biomass-to-methanol", "efficiency"],
+    )
+
+
 def add_methanol_to_power(n, costs, types=None):
 
     if types is None:
@@ -2893,6 +2916,9 @@ def add_methanol(n, costs):
         if methanol_options["biomass_to_methanol"]:
             add_biomass_to_methanol_cc(n, costs)
 
+        if methanol_options["enhanced_biomass_to_methanol"]:
+            add_enhanced_biomass_to_methanol(n, costs)
+
     if methanol_options["methanol_to_power"]:
         add_methanol_to_power(n, costs, types=methanol_options["methanol_to_power"])
 
@@ -3788,7 +3814,9 @@ def add_industry(n, costs):
             / electricity_input,
         )
 
-    if not options["methanol"]["replace_industry_biomass"]:
+    if not options["methanol"]["replace_industry_biomass"] or not isinstance(
+        options["methanol"]["replace_industry_biomass"], bool
+    ):
         n.madd(
             "Bus",
             spatial.biomass.industry,
@@ -3810,19 +3838,33 @@ def add_industry(n, costs):
         else:
             p_set = industrial_demand.loc[sectors_b, "solid biomass"].sum() / nhours
 
-        n.add(
-            "Load",
-            spatial.biomass.industry,
-            bus=spatial.biomass.industry,
-            carrier="solid biomass for industry",
-            p_set=p_set,
-        )
+        if not isinstance(options["methanol"]["replace_industry_biomass"], bool):
+            biomass_replace_fraction = (
+                options["methanol"]["replace_industry_biomass"]
+                * 1e6
+                / nhours
+                / (p_set.sum() if isinstance(p_set, pd.Series) else p_set)
+            )
+            p_set *= 1 - biomass_replace_fraction
+
+        if not options["methanol"]["endogeneous_industry_biomass"]:
+            n.add(
+                "Load",
+                spatial.biomass.industry,
+                bus=spatial.biomass.industry,
+                carrier="solid biomass for industry",
+                p_set=p_set,
+            )
+
+            industry_nodes = spatial.biomass.industry
+        else:
+            industry_nodes = spatial.gas.industry
 
         n.add(
             "Link",
             spatial.biomass.industry,
             bus0=spatial.biomass.nodes,
-            bus1=spatial.biomass.industry,
+            bus1=industry_nodes,
             carrier="solid biomass for industry",
             p_nom_extendable=True,
             efficiency=1.0,
@@ -3837,7 +3879,7 @@ def add_industry(n, costs):
             "Link",
             link_names,
             bus0=spatial.biomass.nodes,
-            bus1=spatial.biomass.industry,
+            bus1=industry_nodes,
             bus2="co2 atmosphere",
             bus3=spatial.co2.nodes,
             carrier="solid biomass for industry CC",
@@ -3928,11 +3970,21 @@ def add_industry(n, costs):
         / nhours
     )
 
-    if options["methanol"]["replace_industry_biomass"]:
-        heat_demand = +(
+    if (
+        options["methanol"]["replace_industry_biomass"]
+        or options["methanol"]["endogeneous_industry_biomass"]
+    ):
+        biomass_demand = (
             industrial_demand.loc[sectors_b, "solid biomass"].groupby("node").sum()
             / nhours
         )
+        if (
+            isinstance(options["methanol"]["replace_industry_biomass"], bool)
+            or options["methanol"]["endogeneous_industry_biomass"]
+        ):
+            heat_demand += biomass_demand
+        else:
+            heat_demand += biomass_demand * biomass_replace_fraction
 
     if options["gas_network"] or options["gas_spatial"]:
         spatial_heat_demand = heat_demand.rename(
@@ -5434,7 +5486,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="base",
+            run="methanol_only_partial_bio",
         )
 
     configure_logging(snakemake)
