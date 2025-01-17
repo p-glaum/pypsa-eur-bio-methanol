@@ -760,6 +760,8 @@ sector:
   biosng: false
   biosng_cc: false
   bioH2: false
+  solid_biomass_transport_cost: false
+  biogas_transport_cost: false
   municipal_solid_waste: false
   limit_max_growth:
     enable: false
@@ -1149,7 +1151,7 @@ plotting:
     urban central gas boiler: '#b0904f'
     gas: '#e05b09'
     fossil gas: '#e05b09'
-    gas import: '#e05b09'
+    gas import: '#e05b09e6'
     natural gas: '#e05b09'
     biogas to gas: '#e36311'
     biogas to gas CC: '#e51245'
@@ -1431,6 +1433,8 @@ plotting:
     HVC to air: 'k'
     non-sequestered HVC: 'k'
     steel: '#b1bbc9'
+    HBI: '#cd7a56'
+    HBI import: '#d68a66'
+    steel import: '#c6a9b1'
     DRI: '#b1bbc9'
     EAF: '#b1bba1'
-    HBI: '#cd7a56'

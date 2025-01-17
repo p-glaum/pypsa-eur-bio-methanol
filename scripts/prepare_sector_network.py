@@ -934,6 +934,13 @@ def add_allam_gas(n, costs):
 
 def add_biomass_to_methanol(n, costs):
 
+    marginal_cost = (
+        costs.loc["biomass-to-methanol", "VOM"]
+        * costs.at["biomass-to-methanol", "efficiency"]
+    )
+    if options.get("solid_biomass_transport_cost", False):
+        marginal_cost += options["solid_biomass_transport_cost"]
+
     n.add(
         "Link",
         spatial.biomass.nodes,
@@ -949,12 +956,18 @@ def add_biomass_to_methanol(n, costs):
         p_nom_extendable=True,
         capital_cost=costs.at["biomass-to-methanol", "fixed"]
         * costs.at["biomass-to-methanol", "efficiency"],
-        marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
-        * costs.at["biomass-to-methanol", "efficiency"],
+        marginal_cost=marginal_cost,
     )
 
 
 def add_biomass_to_methanol_cc(n, costs):
+
+    marginal_cost = (
+        costs.loc["biomass-to-methanol", "VOM"]
+        * costs.at["biomass-to-methanol", "efficiency"]
+    )
+    if options.get("solid_biomass_transport_cost", False):
+        marginal_cost += options["solid_biomass_transport_cost"]
 
     n.add(
         "Link",
@@ -977,12 +990,18 @@ def add_biomass_to_methanol_cc(n, costs):
         * costs.at["biomass-to-methanol", "efficiency"]
         + costs.at["biomass CHP capture", "fixed"]
         * costs.at["biomass-to-methanol", "CO2 stored"],
-        marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
-        * costs.at["biomass-to-methanol", "efficiency"],
+        marginal_cost=marginal_cost,
     )
 
 
 def add_enhanced_biomass_to_methanol(n, costs):
+
+    marginal_cost = (
+        costs.loc["biomass-to-methanol", "VOM"]
+        * costs.at["biomass-to-methanol", "efficiency"]
+    )
+    if options.get("solid_biomass_transport_cost", False):
+        marginal_cost += options["solid_biomass_transport_cost"]
 
     n.add(
         "Link",
@@ -996,12 +1015,12 @@ def add_enhanced_biomass_to_methanol(n, costs):
         lifetime=costs.at["biomass-to-methanol", "lifetime"],
         efficiency=costs.at["enhanced-biomass-to-methanol", "efficiency"],
         efficiency2=-costs.at["enhanced-biomass-to-methanol", "hydrogen-input"],
-        efficiency3=-costs.at["solid biomass", "CO2 intensity"],
+        efficiency3=-costs.at["solid biomass", "CO2 intensity"]
+        * costs.at["enhanced-biomass-to-methanol", "carbon-efficiency"],
         p_nom_extendable=True,
         capital_cost=costs.at["biomass-to-methanol", "fixed"]
         * costs.at["biomass-to-methanol", "efficiency"],
-        marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
-        * costs.at["biomass-to-methanol", "efficiency"],
+        marginal_cost=marginal_cost,
     )
 
 
@@ -1204,6 +1223,11 @@ def add_methanol_reforming(n, costs):
         efficiency2=costs.at["methanolisation", "carbondioxide-input"],
         carrier=tech,
         lifetime=costs.at[tech, "lifetime"],
+        marginal_cost=(
+            options["methanol_distribution_cost"]
+            if options.get("methanol_distribution_cost", False)
+            else 0
+        ),
     )
 
 
@@ -3181,6 +3205,11 @@ def add_biomass(n, costs):
         )
 
     if options["bio_to_gas"]:
+        marginal_cost = (
+            costs.at["biogas CC", "VOM"] + costs.at["biogas upgrading", "VOM"]
+        )
+        if options["biogas_transport_cost"]:
+            marginal_cost += options["biogas_transport_cost"]
         n.add(
             "Link",
             spatial.gas.biogas,
@@ -3191,8 +3220,7 @@ def add_biomass(n, costs):
             carrier="biogas to gas",
             capital_cost=costs.at["biogas", "fixed"]
             + costs.at["biogas upgrading", "fixed"],
-            marginal_cost=costs.at["biogas upgrading", "VOM"],
-            efficiency=costs.at["biogas", "efficiency"],
+            marginal_cost=marginal_cost,
             efficiency2=-costs.at["gas", "CO2 intensity"],
             p_nom_extendable=True,
             lifetime=costs.at["biogas", "lifetime"],
@@ -3207,6 +3235,12 @@ def add_biomass(n, costs):
         else:
             name = spatial.gas.biogas
 
+        marginal_cost = (
+            costs.at["biogas CC", "VOM"] + costs.at["biogas upgrading", "VOM"]
+        )
+        if options["biogas_transport_cost"]:
+            marginal_cost += options["biogas_transport_cost"]
+
         n.add(
             "Link",
             name,
@@ -3220,8 +3254,7 @@ def add_biomass(n, costs):
             + costs.at["biogas upgrading", "fixed"]
             + costs.at["biomass CHP capture", "fixed"]
             * costs.at["biogas CC", "CO2 stored"],
-            marginal_cost=costs.at["biogas CC", "VOM"]
-            + costs.at["biogas upgrading", "VOM"],
+            marginal_cost=marginal_cost,
             efficiency=costs.at["biogas CC", "efficiency"],
             efficiency2=costs.at["biogas CC", "CO2 stored"]
             * costs.at["biogas CC", "capture rate"],
@@ -3244,6 +3277,9 @@ def add_biomass(n, costs):
         +efficiency2 * costs.at[
             "electrolysis", "fixed"
         ]  # rough cost estimation from adding up technology costs
+        marginal_cost = 0
+        if options.get("biogas_transport_cost", False):
+            marginal_cost += options["biogas_transport_cost"]
         n.add(
             "Link",
             spatial.nodes + " biogas to methanol",
@@ -3258,6 +3294,7 @@ def add_biomass(n, costs):
             carrier="biogas-to-methanol",
             capital_cost=capital_cost,
             p_nom_extendable=True,
+            marginal_cost=marginal_cost,
         )
 
         capital_cost_cc = (
@@ -3287,6 +3324,7 @@ def add_biomass(n, costs):
             carrier="biogas-to-methanol CC",
             capital_cost=capital_cost_cc,
             p_nom_extendable=True,
+            marginal_cost=marginal_cost,
         )
 
     if options["biomass_transport"]:
@@ -3497,6 +3535,9 @@ def add_biomass(n, costs):
     # Solid biomass to liquid fuel
     if options["biomass_to_liquid"]:
         add_carrier_buses(n, "oil")
+        marginal_cost = costs.at["BtL", "VOM"] * costs.at["BtL", "efficiency"]
+        if options["solid_biomass_transport_cost"]:
+            marginal_cost += options["solid_biomass_transport_cost"]
         n.add(
             "Link",
             spatial.biomass.nodes,
@@ -3515,13 +3556,16 @@ def add_biomass(n, costs):
             + costs.at["BtL", "CO2 stored"],
             p_nom_extendable=True,
             capital_cost=costs.at["BtL", "fixed"] * costs.at["BtL", "efficiency"],
-            marginal_cost=costs.at["BtL", "VOM"] * costs.at["BtL", "efficiency"],
+            marginal_cost=marginal_cost,
         )
 
     # Solid biomass to liquid fuel with carbon capture
     if options["biomass_to_liquid_cc"]:
         # Assuming that acid gas removal (incl. CO2) from syngas i performed with Rectisol
         # process (Methanol) and that electricity demand for this is included in the base process
+        marginal_cost = costs.at["BtL", "VOM"] * costs.at["BtL", "efficiency"]
+        if options["solid_biomass_transport_cost"]:
+            marginal_cost += options["solid_biomass_transport_cost"]
         n.add(
             "Link",
             spatial.biomass.nodes,
@@ -3543,7 +3587,7 @@ def add_biomass(n, costs):
             p_nom_extendable=True,
             capital_cost=costs.at["BtL", "fixed"] * costs.at["BtL", "efficiency"]
             + costs.at["biomass CHP capture", "fixed"] * costs.at["BtL", "CO2 stored"],
-            marginal_cost=costs.at["BtL", "VOM"] * costs.at["BtL", "efficiency"],
+            marginal_cost=marginal_cost,
         )
 
     # Electrobiofuels (BtL with hydrogen addition to make more use of biogenic carbon).
@@ -3587,6 +3631,9 @@ def add_biomass(n, costs):
 
     # BioSNG from solid biomass
     if options["biosng"] and options["bio_to_gas"]:
+        marginal_cost = costs.at["BioSNG", "VOM"] * costs.at["BioSNG", "efficiency"]
+        if options.get("solid_biomass_transport_cost", False):
+            marginal_cost += options["solid_biomass_transport_cost"]
         n.add(
             "Link",
             spatial.biomass.nodes,
@@ -3601,13 +3648,16 @@ def add_biomass(n, costs):
             + costs.at["BioSNG", "CO2 stored"],
             p_nom_extendable=True,
             capital_cost=costs.at["BioSNG", "fixed"] * costs.at["BioSNG", "efficiency"],
-            marginal_cost=costs.at["BioSNG", "VOM"] * costs.at["BioSNG", "efficiency"],
+            marginal_cost=marginal_cost,
         )
 
     # BioSNG from solid biomass with carbon capture
     if options["biosng_cc"] and options["bio_to_gas"]:
         # Assuming that acid gas removal (incl. CO2) from syngas i performed with Rectisol
         # process (Methanol) and that electricity demand for this is included in the base process
+        marginal_cost = costs.at["BioSNG", "VOM"] * costs.at["BioSNG", "efficiency"]
+        if options.get("solid_biomass_transport_cost", False):
+            marginal_cost += options["solid_biomass_transport_cost"]
         n.add(
             "Link",
             spatial.biomass.nodes,
@@ -3628,7 +3678,7 @@ def add_biomass(n, costs):
             capital_cost=costs.at["BioSNG", "fixed"] * costs.at["BioSNG", "efficiency"]
             + costs.at["biomass CHP capture", "fixed"]
             * costs.at["BioSNG", "CO2 stored"],
-            marginal_cost=costs.at["BioSNG", "VOM"] * costs.at["BioSNG", "efficiency"],
+            marginal_cost=marginal_cost,
         )
 
     if options["bioH2"]:
@@ -3656,7 +3706,11 @@ def add_biomass(n, costs):
             * costs.at["solid biomass to hydrogen", "efficiency"]
             + costs.at["biomass CHP capture", "fixed"]
             * costs.at["solid biomass", "CO2 intensity"],
-            marginal_cost=0.0,
+            marginal_cost=(
+                options["solid_biomass_transport_cost"]
+                if options["solid_biomass_transport_cost"]
+                else 0
+            ),
             lifetime=25,  # TODO: add value to technology-data
         )
 
@@ -3709,7 +3763,7 @@ def add_industry(n, costs):
                 "Generator",
                 "HBI import",
                 bus="EU HBI",
-                carrier="HBI",
+                carrier="HBI import",
                 p_nom_extendable=True,
                 marginal_cost=options["HBI_import"],
             )
@@ -3718,7 +3772,7 @@ def add_industry(n, costs):
                 "Generator",
                 "steel import",
                 bus="EU steel",
-                carrier="steel",
+                carrier="steel import",
                 p_nom_extendable=True,
                 marginal_cost=options["steel_import"],
             )
@@ -4329,9 +4383,7 @@ def add_industry(n, costs):
     )
 
     if options["oil_cracking"]:
-        cracking_losses = options[
-            "oil_cracking"
-        ]  # assumption that 10% is lost due to cracking to shorter chains. One source on FCC looking at energy efficiencies around 11 and 16% (https://www.sciencedirect.com/science/article/pii/S0959652623016050)
+        cracking_losses = options["oil_cracking"]
         n.add(
             "Link",
             spatial.oil.naphtha,
@@ -5486,7 +5538,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="methanol_only_partial_bio",
+            run="base",
         )
 
     configure_logging(snakemake)
