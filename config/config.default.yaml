@@ -692,8 +692,6 @@ sector:
       ocgt: false
       allam: false
     force_industry_heat: false
-    replace_industry_biomass: false
-    endogeneous_industry_biomass: false
     enhanced_biomass_to_methanol: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
@@ -701,6 +699,8 @@ sector:
   ammonia: false
   relocation_ammonia: false
   relocation_HVC: false
+  replace_medium_heat: false
+  endogenous_medium_heat: false
   endogenous_steel: false
   relocation_steel: false
   HBI_import: false   # in €/t
@@ -1204,8 +1204,8 @@ plotting:
     municipal solid waste: '#91ba41'
     solid biomass import: '#d5ca8d'
     solid biomass transport: '#baa741'
-    solid biomass for industry: '#7a6d26'
-    solid biomass for industry CC: '#47411c'
+    solid biomass for industry heat: '#7a6d26'
+    solid biomass for industry heat CC: '#47411c'
     solid biomass for industry co2 from atmosphere: '#736412'
     solid biomass for industry co2 to stored: '#47411c'
     urban central solid biomass CHP: '#9d9042'
@@ -1283,7 +1283,9 @@ plotting:
     decentral heat: '#750606'
     residential urban decentral heat: '#a33c3c'
     services urban decentral heat: '#cc1f1f'
-    low-temperature heat for industry: '#8f2727'
+    low heat for industry: '#ff9999'
+    medium heat for industry: '#ff4d4d'
+    high heat for industry: '#b30000'
     process heat: '#ff0000'
     agriculture heat: '#d9a5a5'
     # heat supply

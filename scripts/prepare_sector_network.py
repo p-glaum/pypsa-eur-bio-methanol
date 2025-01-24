@@ -57,6 +57,12 @@ def define_spatial(nodes, options):
 
     spatial.nodes = nodes
 
+    # heat
+    spatial.industry = SimpleNamespace()
+    spatial.industry.locations = nodes
+    spatial.industry.mediumT = nodes + " medium heat for industry"
+    spatial.industry.highT = nodes + " high heat for industry"
+
     # biomass
 
     spatial.biomass = SimpleNamespace()
@@ -67,8 +73,8 @@ def define_spatial(nodes, options):
         spatial.biomass.nodes_unsustainable = nodes + " unsustainable solid biomass"
         spatial.biomass.bioliquids = nodes + " unsustainable bioliquids"
         spatial.biomass.locations = nodes
-        spatial.biomass.industry = nodes + " solid biomass for industry"
-        spatial.biomass.industry_cc = nodes + " solid biomass for industry CC"
+        spatial.biomass.industry = nodes + " solid biomass for industry heat"
+        spatial.biomass.industry_cc = nodes + " solid biomass for industry heat CC"
         spatial.msw.nodes = nodes + " municipal solid waste"
         spatial.msw.locations = nodes
     else:
@@ -76,8 +82,8 @@ def define_spatial(nodes, options):
         spatial.biomass.nodes_unsustainable = ["EU unsustainable solid biomass"]
         spatial.biomass.bioliquids = ["EU unsustainable bioliquids"]
         spatial.biomass.locations = ["EU"]
-        spatial.biomass.industry = ["solid biomass for industry"]
-        spatial.biomass.industry_cc = ["solid biomass for industry CC"]
+        spatial.biomass.industry = ["solid biomass for industry heat"]
+        spatial.biomass.industry_cc = ["solid biomass for industry heat CC"]
         spatial.msw.nodes = ["EU municipal solid waste"]
         spatial.msw.locations = ["EU"]
 
@@ -109,12 +115,10 @@ def define_spatial(nodes, options):
         spatial.gas.nodes = nodes + " gas"
         spatial.gas.locations = nodes
         spatial.gas.biogas = nodes + " biogas"
-        spatial.gas.industry = nodes + " heat for industry"
     else:
         spatial.gas.nodes = ["EU gas"]
         spatial.gas.locations = ["EU"]
         spatial.gas.biogas = ["EU biogas"]
-        spatial.gas.industry = ["heat for industry"]
 
     spatial.gas.df = pd.DataFrame(vars(spatial.gas), index=nodes)
 
@@ -439,7 +443,6 @@ def update_wind_solar_costs(
             continue
         profile = snakemake.input["profile_offwind-" + connection]
         with xr.open_dataset(profile) as ds:
-
             # if-statement for compatibility with old profiles
             if "year" in ds.indexes:
                 ds = ds.sel(year=ds.year.min(), drop=True)
@@ -663,7 +666,6 @@ def add_carrier_buses(n, carrier, nodes=None):
             and cf_industry["oil_refining_emissions"] > 0
             and options["import_fossil_oil"]
         ):
-
             n.add(
                 "Bus",
                 "oil primary",
@@ -933,7 +935,6 @@ def add_allam_gas(n, costs):
 
 
 def add_biomass_to_methanol(n, costs):
-
     marginal_cost = (
         costs.loc["biomass-to-methanol", "VOM"]
         * costs.at["biomass-to-methanol", "efficiency"]
@@ -961,7 +962,6 @@ def add_biomass_to_methanol(n, costs):
 
 
 def add_biomass_to_methanol_cc(n, costs):
-
     marginal_cost = (
         costs.loc["biomass-to-methanol", "VOM"]
         * costs.at["biomass-to-methanol", "efficiency"]
@@ -995,7 +995,6 @@ def add_biomass_to_methanol_cc(n, costs):
 
 
 def add_enhanced_biomass_to_methanol(n, costs):
-
     marginal_cost = (
         costs.loc["biomass-to-methanol", "VOM"]
         * costs.at["biomass-to-methanol", "efficiency"]
@@ -1025,7 +1024,6 @@ def add_enhanced_biomass_to_methanol(n, costs):
 
 
 def add_methanol_to_power(n, costs, types=None):
-
     if types is None:
         types = {}
 
@@ -2150,7 +2148,6 @@ def add_EVs(
     number_cars,
     temperature,
 ):
-
     n.add("Carrier", "EV battery")
 
     n.add(
@@ -2242,7 +2239,6 @@ def add_EVs(
 
 
 def add_fuel_cell_cars(n, p_set, fuel_cell_share, temperature):
-
     car_efficiency = options["transport_fuel_cell_efficiency"]
 
     # temperature corrected efficiency
@@ -2268,7 +2264,6 @@ def add_fuel_cell_cars(n, p_set, fuel_cell_share, temperature):
 
 
 def add_ice_cars(n, p_set, ice_share, temperature):
-
     add_carrier_buses(n, "oil")
 
     car_efficiency = options["transport_ice_efficiency"]
@@ -2319,7 +2314,6 @@ def add_ice_cars(n, p_set, ice_share, temperature):
 
 
 def add_land_transport(n, costs):
-
     logger.info("Add land transport")
 
     # read in transport demand in units driven km [100 km]
@@ -2453,7 +2447,6 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
     ) in (
         HeatSystem
     ):  # this loops through all heat systems defined in _entities.HeatSystem
-
         overdim_factor = options["overdimension_heat_generators"][
             heat_system.central_or_decentral
         ]
@@ -2907,7 +2900,6 @@ def add_heat(n: pypsa.Network, costs: pd.DataFrame, cop: xr.DataArray):
 
 
 def add_methanol(n, costs):
-
     methanol_options = options["methanol"]
 
     if methanol_options["transport"]:
@@ -3009,7 +3001,6 @@ def add_biomass(n, costs):
         options["municipal_solid_waste"] = False
 
     if options["municipal_solid_waste"]:
-
         if options.get("biomass_spatial", options["biomass_transport"]):
             msw_biomass_potentials_spatial = biomass_potentials[
                 "municipal solid waste"
@@ -3868,85 +3859,180 @@ def add_industry(n, costs):
             / electricity_input,
         )
 
-    if not options["methanol"]["replace_industry_biomass"] or not isinstance(
-        options["methanol"]["replace_industry_biomass"], bool
-    ):
-        n.madd(
-            "Bus",
-            spatial.biomass.industry,
-            location=spatial.biomass.locations,
-            carrier="solid biomass for industry",
-            unit="MWh_LHV",
-        )
+    # medium heat for industry
+    n.add(
+        "Bus",
+        spatial.industry.mediumT,
+        location=spatial.industry.locations,
+        carrier="medium heat for industry",
+        unit="MWh_LHV",
+    )
 
-        if options.get("biomass_spatial", options["biomass_transport"]):
-            p_set = (
-                industrial_demand.loc[
-                    (spatial.biomass.locations, sectors_b), "solid biomass"
-                ]
-                .groupby(level="node")
-                .sum()
-                .rename(index=lambda x: x + " solid biomass for industry")
-                / nhours
-            )
+    p_set = (
+        industrial_demand.loc[(spatial.biomass.locations, sectors_b), "solid biomass"]
+        .groupby(level="node")
+        .sum()
+        / nhours
+    )
+
+    if options["replace_medium_heat"]:
+        if isinstance(options["replace_medium_heat"], bool):
+            replace_medium_heat = p_set.copy()
+            p_set *= 0
         else:
-            p_set = industrial_demand.loc[sectors_b, "solid biomass"].sum() / nhours
+            replace_demand = options["replace_medium_heat"]
+            replace_fraction = replace_demand * 1e6 / (p_set.sum() * nhours)
+            replace_medium_heat = p_set * replace_fraction
+            p_set *= 1 - replace_fraction
 
-        if not isinstance(options["methanol"]["replace_industry_biomass"], bool):
-            biomass_replace_fraction = (
-                options["methanol"]["replace_industry_biomass"]
-                * 1e6
-                / nhours
-                / (p_set.sum() if isinstance(p_set, pd.Series) else p_set)
-            )
-            p_set *= 1 - biomass_replace_fraction
+    p_set = p_set.rename(index=lambda x: x + " medium heat for industry")
 
-        if not options["methanol"]["endogeneous_industry_biomass"]:
+    n.add(
+        "Load",
+        spatial.industry.mediumT,
+        bus=spatial.industry.mediumT,
+        carrier="medium heat for industry",
+        p_set=p_set,
+    )
+
+    n.add(
+        "Link",
+        spatial.industry.mediumT,
+        suffix=" (biomass)",
+        bus0=spatial.biomass.nodes,
+        bus1=spatial.industry.mediumT,
+        carrier="solid biomass for industry heat",
+        p_nom_extendable=True,
+    )
+
+    n.add(
+        "Link",
+        spatial.industry.mediumT,
+        suffix=" (biomass) CC",
+        bus0=spatial.biomass.nodes,
+        bus1=spatial.industry.mediumT,
+        bus2="co2 atmosphere",
+        bus3=spatial.co2.nodes,
+        carrier="solid biomass for industry heat CC",
+        p_nom_extendable=True,
+        capital_cost=costs.at["cement capture", "fixed"]
+        * costs.at["solid biomass", "CO2 intensity"],
+        efficiency=0.9,  # TODO: make config option
+        efficiency2=-costs.at["solid biomass", "CO2 intensity"]
+        * costs.at["cement capture", "capture_rate"],
+        efficiency3=costs.at["solid biomass", "CO2 intensity"]
+        * costs.at["cement capture", "capture_rate"],
+        lifetime=costs.at["cement capture", "lifetime"],
+    )
+
+    if options["endogenous_medium_heat"]:
+        # gas to medium heat
+        if not options["methanol"]["force_industry_heat"]:
             n.add(
-                "Load",
-                spatial.biomass.industry,
-                bus=spatial.biomass.industry,
-                carrier="solid biomass for industry",
-                p_set=p_set,
+                "Link",
+                spatial.industry.mediumT,
+                suffix=" (gas)",
+                bus0=spatial.gas.nodes,
+                bus1=spatial.industry.mediumT,
+                bus2="co2 atmosphere",
+                carrier="gas for industry heat",
+                p_nom_extendable=True,
+                efficiency=1.0,
+                efficiency2=costs.at["gas", "CO2 intensity"],
+                marginal_cost=(
+                    options["gas_distribution_cost"]
+                    if options.get("gas_distribution_cost", False)
+                    else 0
+                ),
             )
 
-            industry_nodes = spatial.biomass.industry
-        else:
-            industry_nodes = spatial.gas.industry
+            n.add(
+                "Link",
+                spatial.industry.mediumT,
+                suffix=" (gas) CC",
+                bus0=spatial.gas.nodes,
+                bus1=spatial.industry.mediumT,
+                bus2="co2 atmosphere",
+                bus3=spatial.co2.nodes,
+                carrier="gas for industry heat CC",
+                p_nom_extendable=True,
+                capital_cost=costs.at["cement capture", "fixed"]
+                * costs.at["gas", "CO2 intensity"],
+                efficiency=0.9,
+                efficiency2=costs.at["gas", "CO2 intensity"]
+                * (1 - costs.at["cement capture", "capture_rate"]),
+                efficiency3=costs.at["gas", "CO2 intensity"]
+                * costs.at["cement capture", "capture_rate"],
+                lifetime=costs.at["cement capture", "lifetime"],
+                marginal_cost=(
+                    options["gas_distribution_cost"]
+                    if options.get("gas_distribution_cost", False)
+                    else 0
+                ),
+            )
+
+        # methanol to medium heat
 
         n.add(
             "Link",
-            spatial.biomass.industry,
-            bus0=spatial.biomass.nodes,
-            bus1=industry_nodes,
-            carrier="solid biomass for industry",
+            spatial.industry.mediumT,
+            suffix=" (methanol)",
+            bus0=spatial.methanol.nodes,
+            bus1=spatial.industry.mediumT,
+            bus2="co2 atmosphere",
+            carrier="methanol for industry heat",
             p_nom_extendable=True,
             efficiency=1.0,
+            efficiency2=costs.at["methanol", "CO2 intensity"],
+            marginal_cost=(
+                options["methanol_distribution_cost"]
+                if options["methanol_distribution_cost"]
+                else 0
+            ),
         )
-
-        if len(spatial.biomass.industry_cc) <= 1 and len(spatial.co2.nodes) > 1:
-            link_names = nodes + " " + spatial.biomass.industry_cc
-        else:
-            link_names = spatial.biomass.industry_cc
 
         n.add(
             "Link",
-            link_names,
-            bus0=spatial.biomass.nodes,
-            bus1=industry_nodes,
+            spatial.industry.mediumT,
+            suffix=" (methanol) CC",
+            bus0=spatial.methanol.nodes,
+            bus1=spatial.industry.mediumT,
             bus2="co2 atmosphere",
             bus3=spatial.co2.nodes,
-            carrier="solid biomass for industry CC",
+            carrier="methanol for industry heat CC",
             p_nom_extendable=True,
             capital_cost=costs.at["cement capture", "fixed"]
-            * costs.at["solid biomass", "CO2 intensity"],
-            efficiency=0.9,  # TODO: make config option
-            efficiency2=-costs.at["solid biomass", "CO2 intensity"]
-            * costs.at["cement capture", "capture_rate"],
-            efficiency3=costs.at["solid biomass", "CO2 intensity"]
+            * costs.at["methanol", "CO2 intensity"],
+            efficiency=0.9,
+            efficiency2=costs.at["methanol", "CO2 intensity"]
+            * (1 - costs.at["cement capture", "capture_rate"]),
+            efficiency3=costs.at["methanol", "CO2 intensity"]
             * costs.at["cement capture", "capture_rate"],
             lifetime=costs.at["cement capture", "lifetime"],
+            marginal_cost=(
+                options["methanol_distribution_cost"]
+                if options["methanol_distribution_cost"]
+                else 0
+            ),
         )
+
+        if not options["methanol"]["force_industry_heat"]:
+            # H2 to low heat
+            n.add(
+                "Link",
+                spatial.industry.mediumT,
+                suffix=" (H2)",
+                bus0=spatial.h2.nodes,
+                bus1=spatial.industry.mediumT,
+                carrier="H2 for industry heat",
+                p_nom_extendable=True,
+                efficiency=1.0,
+                marginal_cost=(
+                    options["H2_distribution_cost"]
+                    if options.get("H2_distribution_cost", False)
+                    else 0
+                ),
+            )
 
     # methanol for industry
 
@@ -4009,64 +4095,43 @@ def add_industry(n, costs):
         efficiency3=-options["MWh_MeOH_per_MWh_H2"] / options["MWh_MeOH_per_tCO2"],
     )
 
-    # gas for industry
+    # high temperature heat for industry
 
     n.add(
         "Bus",
-        spatial.gas.industry,
-        location=spatial.gas.locations,
-        carrier="heat for industry",
+        spatial.industry.highT,
+        location=spatial.industry.locations,
+        carrier="high heat for industry",
         unit="MWh_LHV",
     )
 
-    heat_demand = (
+    high_heat_demand = (
         industrial_demand.loc[(nodes, sectors_b), "methane"].groupby(level="node").sum()
         / nhours
     )
 
-    if (
-        options["methanol"]["replace_industry_biomass"]
-        or options["methanol"]["endogeneous_industry_biomass"]
-    ):
-        biomass_demand = (
-            industrial_demand.loc[sectors_b, "solid biomass"].groupby("node").sum()
-            / nhours
-        )
-        if (
-            isinstance(options["methanol"]["replace_industry_biomass"], bool)
-            or options["methanol"]["endogeneous_industry_biomass"]
-        ):
-            heat_demand += biomass_demand
-        else:
-            heat_demand += biomass_demand * biomass_replace_fraction
+    if options["replace_medium_heat"]:
+        high_heat_demand += replace_medium_heat
 
-    if options["gas_network"] or options["gas_spatial"]:
-        spatial_heat_demand = heat_demand.rename(
-            index=lambda x: x + " heat for industry"
-        )
-    else:
-        spatial_heat_demand = heat_demand.sum()
+    high_heat_demand = high_heat_demand.rename(
+        index=lambda x: x + " high heat for industry"
+    )
 
     n.add(
         "Load",
-        spatial.gas.industry,
-        bus=spatial.gas.industry,
-        carrier="heat for industry",
-        p_set=spatial_heat_demand,
+        spatial.industry.highT,
+        bus=spatial.industry.highT,
+        carrier="high heat for industry",
+        p_set=high_heat_demand,
     )
-
-    if len(spatial.gas.industry) > 1 or len(spatial.co2.nodes) > 1:
-        link_names_CC = nodes + " heat for industy"
-    else:
-        link_names_CC = ["heat for industry"]
 
     if not options["methanol"]["force_industry_heat"]:
         n.add(
             "Link",
-            spatial.gas.industry,
+            spatial.industry.highT,
             suffix=" (gas)",
             bus0=spatial.gas.nodes,
-            bus1=spatial.gas.industry,
+            bus1=spatial.industry.highT,
             bus2="co2 atmosphere",
             carrier="gas for industry heat",
             p_nom_extendable=True,
@@ -4081,10 +4146,10 @@ def add_industry(n, costs):
 
         n.add(
             "Link",
-            link_names_CC,
+            spatial.industry.highT,
             suffix=" (gas) CC",
             bus0=spatial.gas.nodes,
-            bus1=spatial.gas.industry,
+            bus1=spatial.industry.highT,
             bus2="co2 atmosphere",
             bus3=spatial.co2.nodes,
             carrier="gas for industry heat CC",
@@ -4105,17 +4170,12 @@ def add_industry(n, costs):
         )
     # allow methanol to serve heat demand
 
-    if len(spatial.gas.industry) > 1 or len(spatial.methanol.nodes) > 1:
-        link_name = nodes + " heat for industry"
-    else:
-        link_name = ["heat for industry"]
-
     n.add(
         "Link",
-        link_name,
+        spatial.industry.highT,
         suffix=" (methanol)",
         bus0=spatial.methanol.nodes,
-        bus1=spatial.gas.industry,
+        bus1=spatial.industry.highT,
         bus2="co2 atmosphere",
         carrier="methanol for industry heat",
         p_nom_extendable=True,
@@ -4130,10 +4190,10 @@ def add_industry(n, costs):
 
     n.add(
         "Link",
-        link_names_CC,
+        spatial.industry.highT,
         suffix=" (methanol) CC",
         bus0=spatial.methanol.nodes,
-        bus1=spatial.gas.industry,
+        bus1=spatial.industry.highT,
         bus2="co2 atmosphere",
         bus3=spatial.co2.nodes,
         carrier="methanol for industry heat CC",
@@ -4160,7 +4220,7 @@ def add_industry(n, costs):
             spatial.h2.locations + " heat for industry",
             suffix=" (H2)",
             bus0=spatial.h2.nodes,
-            bus1=spatial.gas.industry,
+            bus1=spatial.industry.highT,
             carrier="H2 for industry heat",
             p_nom_extendable=True,
             efficiency=1.0,
@@ -4171,17 +4231,18 @@ def add_industry(n, costs):
             ),
         )
 
-        n.add(
-            "Load",
-            nodes,
-            suffix=" H2 for industry",
-            bus=nodes + " H2",
-            carrier="H2 for industry",
-            p_set=industrial_demand.loc[(nodes, sectors_b), "hydrogen"]
-            .groupby(level="node")
-            .sum()
-            / nhours,
-        )
+    # add hydrogen demand for industry
+    n.add(
+        "Load",
+        nodes,
+        suffix=" H2 for industry",
+        bus=nodes + " H2",
+        carrier="H2 for industry",
+        p_set=industrial_demand.loc[(nodes, sectors_b), "hydrogen"]
+        .groupby(level="node")
+        .sum()
+        / nhours,
+    )
 
     shipping_hydrogen_share = get(options["shipping_hydrogen_share"], investment_year)
     shipping_methanol_share = get(options["shipping_methanol_share"], investment_year)
@@ -4342,7 +4403,6 @@ def add_industry(n, costs):
             )
 
         if shipping_oil_share:
-
             p_set_oil = shipping_oil_share * p_set.rename(lambda x: x + " shipping oil")
 
             if not options["regional_oil_demand"]:
@@ -4473,7 +4533,6 @@ def add_industry(n, costs):
         link_names = spatial.oil.HVC
 
     if cf_industry["waste_to_energy"] or cf_industry["waste_to_energy_cc"]:
-
         non_sequestered_hvc_locations = (
             pd.Index(spatial.oil.demand_locations) + " non-sequestered HVC"
         )
@@ -4560,7 +4619,6 @@ def add_industry(n, costs):
             )
 
         if cf_industry["waste_to_energy_cc"]:
-
             n.add(
                 "Link",
                 spatial.nodes + " waste CHP CC",
@@ -4599,7 +4657,6 @@ def add_industry(n, costs):
         )
 
     if options["methanol"].get("methanol_to_olefins", False):
-
         logger.info("Adding methanol to olefins")
         tech = "methanol-to-olefins/aromatics"
 
@@ -4771,7 +4828,7 @@ def add_industry(n, costs):
     n.add(
         "Load",
         nodes,
-        suffix=" low-temperature heat for industry",
+        suffix=" low heat for industry",
         bus=[
             (
                 node + " urban central heat"
@@ -4780,7 +4837,7 @@ def add_industry(n, costs):
             )
             for node in nodes
         ],
-        carrier="low-temperature heat for industry",
+        carrier="low heat for industry",
         p_set=industrial_demand.loc[(nodes, sectors_b), "low-temperature heat"]
         .groupby(level="node")
         .sum()
@@ -5568,13 +5625,12 @@ def add_enhanced_geothermal(n, egs_potentials, egs_overlap, costs):
 # %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
-
         from _helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="70",
+            clusters="100",
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
