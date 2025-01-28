@@ -421,7 +421,7 @@ def attach_load(
     logger.info(f"Load data scaled by factor {scaling}.")
     load *= scaling
 
-    n.add("Load", load.columns, bus=load.columns, p_set=load)  # carrier="electricity"
+    n.add("Load", load.columns, bus=load.columns, p_set=load, carrier="electricity")
 
 
 def set_transmission_costs(
@@ -972,7 +972,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from _helpers import mock_snakemake
 
-        snakemake = mock_snakemake("add_electricity", clusters=100)
+        snakemake = mock_snakemake("add_electricity", clusters=100, run="base")
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 

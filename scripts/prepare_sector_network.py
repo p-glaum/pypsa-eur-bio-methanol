@@ -1813,7 +1813,9 @@ def add_storage_and_grids(n, costs):
         remove_i = n.generators[gas_i & internal_i].index
         n.generators.drop(remove_i, inplace=True)
 
-        input_types = ["lng", "pipeline", "production"]
+        input_types = [
+            "production"
+        ]  # "lng", "pipeline"] only consider production in Europe.
         p_nom = (
             gas_input_nodes[input_types].sum(axis=1).rename(lambda x: x + " gas import")
         )
@@ -3925,6 +3927,17 @@ def add_industry(n, costs):
         lifetime=costs.at["cement capture", "lifetime"],
     )
 
+    if options["electricity_to_medium_heat"]:
+        n.add(
+            "Link",
+            spatial.industry.mediumT,
+            suffix=" (electricity)",
+            bus0=nodes + " low voltage",
+            bus1=spatial.industry.mediumT,
+            carrier="electricity for industry heat",
+            p_nom_extendable=True,
+        )
+
     if options["endogenous_medium_heat"]:
         # gas to medium heat
         if not options["methanol"]["force_industry_heat"]:
@@ -4212,6 +4225,17 @@ def add_industry(n, costs):
             else 0
         ),
     )
+
+    if options["electricity_to_high_heat"]:
+        n.add(
+            "Link",
+            spatial.industry.highT,
+            suffix=" (electricity)",
+            bus0=nodes + " low voltage",
+            bus1=spatial.industry.highT,
+            carrier="electricity for industry heat",
+            p_nom_extendable=True,
+        )
 
     if not options["methanol"]["force_industry_heat"]:
         # allow H2 to serve heat demand
@@ -4812,9 +4836,9 @@ def add_industry(n, costs):
         bus3=spatial.oil.nodes,
         bus4=spatial.co2.nodes,
         carrier="Fischer-Tropsch",
-        efficiency=total_efficiency * 0.3,  # fraction naphtha
-        efficiency2=total_efficiency * 0.4,  # fraction kerosene
-        efficiency3=total_efficiency * 0.3,  # fraction diesel
+        efficiency=total_efficiency * 0.312,  # fraction naphtha
+        efficiency2=total_efficiency * 0.439,  # fraction kerosene
+        efficiency3=total_efficiency * 0.249,  # fraction diesel
         efficiency4=-costs.at["oil", "CO2 intensity"] * total_efficiency,
         capital_cost=costs.at["Fischer-Tropsch", "fixed"]
         * total_efficiency,  # EUR/MW_H2/a

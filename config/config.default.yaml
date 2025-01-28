@@ -699,6 +699,8 @@ sector:
   ammonia: false
   relocation_ammonia: false
   relocation_HVC: false
+  electricity_to_medium_heat: false
+  electricity_to_high_heat: false
   replace_medium_heat: false
   endogenous_medium_heat: false
   endogenous_steel: false
@@ -1181,7 +1183,7 @@ plotting:
     urban central oil boiler: '#9d9d9d'
     services urban decentral oil boiler: '#999999'
     agriculture machinery oil: '#949494'
-    shipping oil: "#808080"
+    shipping oil: "#505050"
     land transport oil: '#afafaf'
     # nuclear
     Nuclear: '#ff8c00'
@@ -1313,6 +1315,7 @@ plotting:
     CHP electric: '#8a5751'
     district heating: '#e8beac'
     resistive heater: '#d8f9b8'
+    electricity for industry heat: '#d8f9b8'
     residential rural resistive heater: '#bef5b5'
     residential urban decentral resistive heater: '#b2f1a9'
     services rural resistive heater: '#a5ed9d'
