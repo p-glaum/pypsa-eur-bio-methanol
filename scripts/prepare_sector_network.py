@@ -3903,6 +3903,7 @@ def add_industry(n, costs):
         suffix=" (biomass)",
         bus0=spatial.biomass.nodes,
         bus1=spatial.industry.mediumT,
+        capital_cost=costs.at["solid biomass boiler steam", "fixed"],
         carrier="solid biomass for industry heat",
         p_nom_extendable=True,
     )
@@ -3917,7 +3918,8 @@ def add_industry(n, costs):
         bus3=spatial.co2.nodes,
         carrier="solid biomass for industry heat CC",
         p_nom_extendable=True,
-        capital_cost=costs.at["cement capture", "fixed"]
+        capital_cost=costs.at["solid biomass boiler steam", "fixed"]
+        + costs.at["cement capture", "fixed"]
         * costs.at["solid biomass", "CO2 intensity"],
         efficiency=0.9,  # TODO: make config option
         efficiency2=-costs.at["solid biomass", "CO2 intensity"]
@@ -3935,6 +3937,7 @@ def add_industry(n, costs):
             bus0=nodes + " low voltage",
             bus1=spatial.industry.mediumT,
             carrier="electricity for industry heat",
+            capital_cost=costs.at["electric boiler steam", "fixed"],
             p_nom_extendable=True,
         )
 
@@ -3957,6 +3960,7 @@ def add_industry(n, costs):
                     if options.get("gas_distribution_cost", False)
                     else 0
                 ),
+                capital_cost=costs.at["gas boiler steam", "fixed"],
             )
 
             n.add(
@@ -3970,7 +3974,8 @@ def add_industry(n, costs):
                 carrier="gas for industry heat CC",
                 p_nom_extendable=True,
                 capital_cost=costs.at["cement capture", "fixed"]
-                * costs.at["gas", "CO2 intensity"],
+                * costs.at["gas", "CO2 intensity"]
+                + costs.at["gas boiler steam", "fixed"],
                 efficiency=0.9,
                 efficiency2=costs.at["gas", "CO2 intensity"]
                 * (1 - costs.at["cement capture", "capture_rate"]),
@@ -3997,6 +4002,7 @@ def add_industry(n, costs):
             p_nom_extendable=True,
             efficiency=1.0,
             efficiency2=costs.at["methanol", "CO2 intensity"],
+            capital_cost=costs.at["gas boiler steam", "fixed"],
             marginal_cost=(
                 options["methanol_distribution_cost"]
                 if options["methanol_distribution_cost"]
@@ -4015,7 +4021,8 @@ def add_industry(n, costs):
             carrier="methanol for industry heat CC",
             p_nom_extendable=True,
             capital_cost=costs.at["cement capture", "fixed"]
-            * costs.at["methanol", "CO2 intensity"],
+            * costs.at["methanol", "CO2 intensity"]
+            + costs.at["gas boiler steam", "fixed"],
             efficiency=0.9,
             efficiency2=costs.at["methanol", "CO2 intensity"]
             * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4040,6 +4047,7 @@ def add_industry(n, costs):
                 carrier="H2 for industry heat",
                 p_nom_extendable=True,
                 efficiency=1.0,
+                capital_cost=costs.at["gas boiler steam", "fixed"],
                 marginal_cost=(
                     options["H2_distribution_cost"]
                     if options.get("H2_distribution_cost", False)
@@ -4150,6 +4158,7 @@ def add_industry(n, costs):
             p_nom_extendable=True,
             efficiency=1.0,
             efficiency2=costs.at["gas", "CO2 intensity"],
+            capital_cost=costs.at["gas boiler steam", "fixed"],
             marginal_cost=(
                 options["gas_distribution_cost"]
                 if options.get("gas_distribution_cost", False)
@@ -4167,14 +4176,14 @@ def add_industry(n, costs):
             bus3=spatial.co2.nodes,
             carrier="gas for industry heat CC",
             p_nom_extendable=True,
-            capital_cost=costs.at["cement capture", "fixed"]
-            * costs.at["gas", "CO2 intensity"],
             efficiency=0.9,
             efficiency2=costs.at["gas", "CO2 intensity"]
             * (1 - costs.at["cement capture", "capture_rate"]),
             efficiency3=costs.at["gas", "CO2 intensity"]
             * costs.at["cement capture", "capture_rate"],
             lifetime=costs.at["cement capture", "lifetime"],
+            capital_cost=costs.at["gas boiler steam", "fixed"]
+            + costs.at["cement capture", "fixed"] * costs.at["gas", "CO2 intensity"],
             marginal_cost=(
                 options["gas_distribution_cost"]
                 if options.get("gas_distribution_cost", False)
@@ -4194,6 +4203,7 @@ def add_industry(n, costs):
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
+        capital_cost=costs.at["gas boiler steam", "fixed"],
         marginal_cost=(
             options["methanol_distribution_cost"]
             if options["methanol_distribution_cost"]
@@ -4211,8 +4221,6 @@ def add_industry(n, costs):
         bus3=spatial.co2.nodes,
         carrier="methanol for industry heat CC",
         p_nom_extendable=True,
-        capital_cost=costs.at["cement capture", "fixed"]
-        * costs.at["methanol", "CO2 intensity"],
         efficiency=0.9,
         efficiency2=costs.at["methanol", "CO2 intensity"]
         * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4224,6 +4232,9 @@ def add_industry(n, costs):
             if options["methanol_distribution_cost"]
             else 0
         ),
+        capital_cost=costs.at["cement capture", "fixed"]
+        * costs.at["methanol", "CO2 intensity"]
+        + costs.at["gas boiler steam", "fixed"],
     )
 
     if options["electricity_to_high_heat"]:
@@ -4248,6 +4259,7 @@ def add_industry(n, costs):
             carrier="H2 for industry heat",
             p_nom_extendable=True,
             efficiency=1.0,
+            capital_cost=costs.at["gas boiler steam", "fixed"],
             marginal_cost=(
                 options["H2_distribution_cost"]
                 if options.get("H2_distribution_cost", False)
