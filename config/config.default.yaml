@@ -698,7 +698,6 @@ sector:
     biogas_to_methanol: false
   ammonia: false
   relocation_ammonia: false
-  relocation_HVC: false
   electricity_to_medium_heat: false
   electricity_to_high_heat: false
   replace_medium_heat: false
@@ -1155,7 +1154,7 @@ plotting:
     urban central gas boiler: '#b0904f'
     gas: '#e05b09'
     fossil gas: '#e05b09'
-    gas import: '#e05b09e6'
+    gas import: '#e05b09e0'
     natural gas: '#e05b09'
     biogas to gas: '#e36311'
     biogas to gas CC: '#e51245'

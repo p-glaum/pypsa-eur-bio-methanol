@@ -1439,7 +1439,7 @@ def add_ammonia(n, costs):
         bus0=nodes,
         bus1=spatial.ammonia.nodes,
         bus2=nodes + " H2",
-        p_nom=p_nom if no_relocation else 0,
+        p_nom=p_nom * 1.001 if no_relocation else 0,
         p_nom_extendable=False if no_relocation else True,
         p_min_pu=options["min_part_load_haber_bosch"],
         carrier="Haber-Bosch",
@@ -3832,7 +3832,7 @@ def add_industry(n, costs):
             capital_cost=costs.at["direct iron reduction furnace", "fixed"]
             / electricity_input,
             marginal_cost=marginal_cost,
-            p_nom=p_nom if no_relocation else 0,
+            p_nom=p_nom * 1.001 if no_relocation else 0,
             p_nom_extendable=False if no_relocation else True,
             bus0=nodes,
             bus1="EU HBI",
@@ -3851,7 +3851,7 @@ def add_industry(n, costs):
             suffix=" EAF",
             carrier="EAF",
             capital_cost=costs.at["electric arc furnace", "fixed"] / electricity_input,
-            p_nom=p_nom if no_relocation else 0,
+            p_nom=p_nom * 1.001 if no_relocation else 0,
             p_nom_extendable=False if no_relocation else True,
             bus0=nodes,
             bus1="EU steel",
@@ -4698,16 +4698,6 @@ def add_industry(n, costs):
 
         naphtha_per_t_hvc = 12.622  # MWh per tonne of HVC (taken from sector ratios)
 
-        # set to not allow industry reallocation
-        if not options.get("relocation_HVC", False):
-            p_nom = (
-                industrial_demand.loc[nodes, "naphtha"].groupby("node").sum()
-                / naphtha_per_t_hvc
-                / nhours
-            )
-        else:
-            p_nom = 0
-
         process_emissions = (
             costs.at[tech, "carbondioxide-output"] / costs.at[tech, "methanol-input"]
         )
@@ -4718,7 +4708,6 @@ def add_industry(n, costs):
                 nodes,
                 suffix=f" {tech}",
                 carrier=tech,
-                p_nom=p_nom,
                 p_nom_extendable=True,
                 bus0=spatial.methanol.nodes,
                 bus1=spatial.oil.HVC,
@@ -4743,7 +4732,6 @@ def add_industry(n, costs):
                 nodes,
                 suffix=f" {tech}",
                 carrier=tech,
-                p_nom=p_nom,
                 p_nom_extendable=True,
                 bus0=spatial.methanol.nodes,
                 bus1=spatial.oil.HVC,
