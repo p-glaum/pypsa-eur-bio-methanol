@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 
@@ -9,13 +8,16 @@ import hashlib
 import logging
 import os
 import re
-import urllib
-from functools import partial
+import time
+from functools import partial, wraps
 from os.path import exists
 from pathlib import Path
 from shutil import copyfile
+from typing import Callable
 
+import fiona
 import pandas as pd
+import pypsa
 import pytz
 import requests
 import yaml
@@ -107,11 +109,26 @@ def get_run_path(fn, dir, rdir, shared_resources, exclude_from_shared):
         irrelevant_wildcards = {"technology", "year", "scope", "kind"}
         no_relevant_wildcards = not existing_wildcards - irrelevant_wildcards
         not_shared_rule = (
-            not fn.startswith("networks/elec")
+            not fn.endswith("elec.nc")
             and not fn.startswith("add_electricity")
             and not any(fn.startswith(ex) for ex in exclude_from_shared)
         )
         is_shared = no_relevant_wildcards and not_shared_rule
+        shared_files = (
+            "networks/base_s_{clusters}.nc",
+            "regions_onshore_base_s_{clusters}.geojson",
+            "regions_offshore_base_s_{clusters}.geojson",
+            "busmap_base_s_{clusters}.csv",
+            "linemap_base_s_{clusters}.csv",
+            "cluster_network_base_s_{clusters}",
+            "profile_{clusters}_",
+            "build_renewable_profile_{clusters}",
+            "availability_matrix_",
+            "determine_availability_matrix_",
+            "solar_thermal",
+        )
+        if any(prefix in fn for prefix in shared_files) or is_shared:
+            is_shared = True
         rdir = "" if is_shared else rdir
     elif isinstance(shared_resources, str):
         rdir = shared_resources + "/"
@@ -143,6 +160,16 @@ def path_provider(dir, rdir, shared_resources, exclude_from_shared):
         shared_resources=shared_resources,
         exclude_from_shared=exclude_from_shared,
     )
+
+
+def get_shadow(run):
+    """
+    Returns 'shallow' or None depending on the user setting.
+    """
+    shadow_config = run.get("use_shadow_directory", True)
+    if shadow_config:
+        return "shallow"
+    return None
 
 
 def get_opt(opts, expr, flags=None):
@@ -186,13 +213,13 @@ def set_scenario_config(snakemake):
     scenario = snakemake.config["run"].get("scenarios", {})
     if scenario.get("enable") and "run" in snakemake.wildcards.keys():
         try:
-            with open(scenario["file"], "r") as f:
+            with open(scenario["file"]) as f:
                 scenario_config = yaml.safe_load(f)
         except FileNotFoundError:
             # fallback for mock_snakemake
             script_dir = Path(__file__).parent.resolve()
             root_dir = script_dir.parent
-            with open(root_dir / scenario["file"], "r") as f:
+            with open(root_dir / scenario["file"]) as f:
                 scenario_config = yaml.safe_load(f)
         update_config(snakemake.config, scenario_config[snakemake.wildcards.run])
 
@@ -390,6 +417,8 @@ def aggregate_costs(n, flatten=False, opts=None, existing_only=False):
 
 def progress_retrieve(url, file, disable=False):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    # Hotfix - Bug, tqdm not working with disable=False
+    disable = True
 
     if disable:
         response = requests.get(url, headers=headers, stream=True)
@@ -411,6 +440,47 @@ def progress_retrieve(url, file, disable=False):
                 for data in response.iter_content(chunk_size=chunk_size):
                     f.write(data)
                     t.update(len(data))
+
+
+def retry(func: Callable) -> Callable:
+    """
+    Retry decorator to run retry function on specific exceptions, before raising them.
+
+    Can for example be used for debugging issues which are hard to replicate or
+    for for handling retrieval errors.
+
+    Currently catches:
+    - fiona.errors.DriverError
+
+    Parameters
+    ----------
+    retries : int
+        Number of retries before raising the exception.
+    delay : int
+        Delay between retries in seconds.
+
+    Returns
+    -------
+    callable
+        A decorator function that can be used to wrap the function to be retried.
+    """
+    retries = 3
+    delay = 5
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        for attempt in range(retries):
+            try:
+                return func(*args, **kwargs)
+            except fiona.errors.DriverError as e:
+                logger.warning(
+                    f"Attempt {attempt + 1} failed: {type(e).__name__} - {e}. "
+                    f"Retrying..."
+                )
+                time.sleep(delay)
+        raise Exception("Retrieval retries exhausted.")
+
+    return wrapper
 
 
 def mock_snakemake(
@@ -643,6 +713,11 @@ def update_config_from_wildcards(config, w, inplace=True):
                 config["adjustments"]["electricity"], {attr: {carrier: factor}}
             )
 
+        for o in opts:
+            if o.startswith("lv") or o.startswith("lc"):
+                config["electricity"]["transmission_expansion"] = o[1:]
+                break
+
     if w.get("sector_opts"):
         opts = w.sector_opts.split("-")
 
@@ -702,9 +777,9 @@ def update_config_from_wildcards(config, w, inplace=True):
         if dg_enable:
             config["sector"]["electricity_distribution_grid"] = True
             if dg_factor is not None:
-                config["sector"][
-                    "electricity_distribution_grid_cost_factor"
-                ] = dg_factor
+                config["sector"]["electricity_distribution_grid_cost_factor"] = (
+                    dg_factor
+                )
 
         if "biomasstransport" in opts:
             config["sector"]["biomass_transport"] = True
@@ -814,9 +889,9 @@ def validate_checksum(file_path, zenodo_url=None, checksum=None):
         for chunk in iter(lambda: f.read(65536), b""):  # 64kb chunks
             hasher.update(chunk)
     calculated_checksum = hasher.hexdigest()
-    assert (
-        calculated_checksum == checksum
-    ), "Checksum is invalid. This may be due to an incomplete download. Delete the file and re-execute the rule."
+    assert calculated_checksum == checksum, (
+        "Checksum is invalid. This may be due to an incomplete download. Delete the file and re-execute the rule."
+    )
 
 
 def get_snapshots(snapshots, drop_leap_day=False, freq="h", **kwargs):
@@ -831,9 +906,39 @@ def get_snapshots(snapshots, drop_leap_day=False, freq="h", **kwargs):
     return time
 
 
-def rename_techs(label):
+def sanitize_custom_columns(n: pypsa.Network):
+    """
+    Sanitize non-standard columns used throughout the workflow.
+
+    Parameters
+    ----------
+        n (pypsa.Network): The network object.
+
+    Returns
+    -------
+        None
+    """
+    if "reversed" in n.links.columns:
+        # Replace NA values with default value False
+        n.links.loc[n.links.reversed.isna(), "reversed"] = False
+        n.links.reversed = n.links.reversed.astype(bool)
+
+
+def rename_techs(label: str) -> str:
     """
     Rename technology labels for better readability.
+
+    Removes some prefixes and renames if certain conditions defined in function body are met.
+
+    Parameters
+    ----------
+    label: str
+        Technology label to be renamed
+
+    Returns
+    -------
+    str
+        Renamed label
     """
     prefix_to_remove = [
         "residential ",
