@@ -3364,7 +3364,7 @@ def add_biomass(n, costs):
                 carrier="municipal solid waste transport",
             )
 
-    elif options["biomass_spatial"]:
+    elif options["biomass_spatial"] and options["biomass_transport_generator"]:
         # add artificial biomass generators at nodes which include transport costs
         transport_costs = pd.read_csv(
             snakemake.input.biomass_transport_costs, index_col=0
@@ -4158,7 +4158,7 @@ def add_industry(n, costs):
             p_nom_extendable=True,
             efficiency=1.0,
             efficiency2=costs.at["gas", "CO2 intensity"],
-            capital_cost=costs.at["gas boiler steam", "fixed"],
+            capital_cost=costs.at["direct firing gas", "fixed"],
             marginal_cost=(
                 options["gas_distribution_cost"]
                 if options.get("gas_distribution_cost", False)
@@ -4182,7 +4182,7 @@ def add_industry(n, costs):
             efficiency3=costs.at["gas", "CO2 intensity"]
             * costs.at["cement capture", "capture_rate"],
             lifetime=costs.at["cement capture", "lifetime"],
-            capital_cost=costs.at["gas boiler steam", "fixed"]
+            capital_cost=costs.at["direct firing gas", "fixed"]
             + costs.at["cement capture", "fixed"] * costs.at["gas", "CO2 intensity"],
             marginal_cost=(
                 options["gas_distribution_cost"]
@@ -4203,7 +4203,7 @@ def add_industry(n, costs):
         p_nom_extendable=True,
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
-        capital_cost=costs.at["gas boiler steam", "fixed"],
+        capital_cost=costs.at["direct firing gas", "fixed"],
         marginal_cost=(
             options["methanol_distribution_cost"]
             if options["methanol_distribution_cost"]
@@ -4234,7 +4234,7 @@ def add_industry(n, costs):
         ),
         capital_cost=costs.at["cement capture", "fixed"]
         * costs.at["methanol", "CO2 intensity"]
-        + costs.at["gas boiler steam", "fixed"],
+        + costs.at["direct firing gas", "fixed"],
     )
 
     if options["electricity_to_high_heat"]:
@@ -4246,6 +4246,7 @@ def add_industry(n, costs):
             bus1=spatial.industry.highT,
             carrier="electricity for industry heat",
             p_nom_extendable=True,
+            capital_cost=costs.at["direct firing electricity", "fixed"],
         )
 
     if not options["methanol"]["force_industry_heat"]:
@@ -4259,7 +4260,7 @@ def add_industry(n, costs):
             carrier="H2 for industry heat",
             p_nom_extendable=True,
             efficiency=1.0,
-            capital_cost=costs.at["gas boiler steam", "fixed"],
+            capital_cost=costs.at["direct firing gas", "fixed"],
             marginal_cost=(
                 options["H2_distribution_cost"]
                 if options.get("H2_distribution_cost", False)
@@ -4308,7 +4309,7 @@ def add_industry(n, costs):
             location="EU",
             unit="MWh",
         )
-        # only consider eu wide shipping and no reginal shipping demand
+        # only consider eu wide shipping and no reginal shipping demand, shipping demand in MWh_oil
         n.add(
             "Load",
             "EU shipping demand",
@@ -4316,7 +4317,7 @@ def add_industry(n, costs):
             carrier="shipping",
             p_set=p_set.sum(),
         )
-        # assume same efficiency for oil and methanol shipping engines (https://www.sciencedirect.com/science/article/pii/S2352550920301512#tbl0004)
+
         n.add(
             "Link",
             spatial.methanol.shipping,
@@ -4325,8 +4326,11 @@ def add_industry(n, costs):
             bus2="co2 atmosphere",
             carrier="shipping methanol",
             p_nom_extendable=True,
+            efficiency=options["shipping_methanol_efficiency"]
+            / options["shipping_oil_efficiency"],
             efficiency2=costs.at["methanol", "CO2 intensity"],
         )
+
         n.add(
             "Link",
             spatial.oil.shipping,
@@ -4470,6 +4474,24 @@ def add_industry(n, costs):
                 p_nom_extendable=True,
                 efficiency2=costs.at["oil", "CO2 intensity"],
             )
+
+    if options.get("electrify_domestic_shipping", False):
+        domestic_navigation = pop_weighted_energy_totals.loc[
+            nodes, ["total domestic navigation"]
+        ].squeeze()
+
+        n.add(
+            "Link",
+            nodes,
+            suffix=" domestic shipping",
+            bus0=nodes + " low voltage",
+            bus1="EU shipping",
+            carrier="shipping electrified",
+            efficiency=options["shipping_electricity_efficiency"]
+            / options["shipping_oil_efficiency"],
+            p_nom_max=domestic_navigation * 1e6 / nhours,
+            p_nom_extendable=True,
+        )
 
     if options["oil_boilers"]:
         nodes = pop_layout.index
@@ -4792,6 +4814,24 @@ def add_industry(n, costs):
         carrier="kerosene for aviation",
         p_set=p_set,
     )
+
+    if options["electrify_domestic_aviation"]:
+        domestic_aviation = pop_weighted_energy_totals.loc[
+            nodes, ["total domestic aviation"]
+        ].squeeze()
+
+        n.add(
+            "Link",
+            nodes,
+            suffix=" domestic aviation",
+            bus0=nodes + " low voltage",
+            bus1=spatial.oil.aviation,
+            carrier="aviation electrified",
+            efficiency=options["aviation_electricity_efficiency"]
+            / options["aviation_jet_fuel_efficiency"],
+            p_nom_max=domestic_aviation * 1e6 / nhours,
+            p_nom_extendable=True,
+        )
 
     if options["oil_cracking"]:
         cracking_losses = options[

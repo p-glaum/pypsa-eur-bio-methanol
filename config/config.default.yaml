@@ -594,7 +594,12 @@ sector:
     2050: 0
   shipping_methanol_efficiency: 0.46
   shipping_oil_efficiency: 0.40
+  electrify_domestic_shipping: false
+  shipping_electricity_efficiency: 0.85
   aviation_demand_factor: 1.
+  electrify_domestic_aviation: false
+  aviation_electricity_efficiency: 0.855
+  aviation_jet_fuel_efficiency: 0.55
   HVC_demand_factor: 1.
   time_dep_hp_cop: true
   heat_pump_sink_T_individual_heating: 55.
@@ -752,6 +757,7 @@ sector:
   gas_distribution_grid_cost_factor: 1.0
   biomass_spatial: false
   biomass_transport: false
+  biomass_transport_generator: true
   bio_to_gas: true
   biogas_upgrading_cc: false
   conventional_generation:
@@ -1223,6 +1229,7 @@ plotting:
     unsustainable bioliquids: '#32CD32'
     electrobiofuels: 'red'
     BioSNG: '#123456'
+    BioSNG CC: '#123456CC'
     solid biomass to hydrogen: '#654321'
     # power transmission
     lines: '#6c9459'
@@ -1236,6 +1243,8 @@ plotting:
     industry electricity: '#2d2a66'
     industry new electricity: '#2d2a66'
     agriculture electricity: '#494778'
+    shipping electrified: '#1a0d7a'
+    aviation electrified: '#1a0d7a'
     # battery + EVs
     battery: '#ace37f'
     battery storage: '#ace37f'
