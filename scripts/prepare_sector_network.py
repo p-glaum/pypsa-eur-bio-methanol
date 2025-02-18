@@ -186,7 +186,7 @@ def define_spatial(nodes, options):
         spatial.oil.naphtha = nodes + " naphtha for industry"
         spatial.oil.HVC = nodes + " HVC for industry"
         spatial.oil.kerosene = nodes + " kerosene"
-        spatial.oil.aviation = nodes + " kerosene for aviation"
+        spatial.oil.aviation = nodes + " aviation"
         spatial.oil.shipping = nodes + " shipping oil"
         spatial.oil.agriculture_machinery = nodes + " agriculture machinery oil"
         spatial.oil.land_transport = nodes + " land transport oil"
@@ -195,7 +195,7 @@ def define_spatial(nodes, options):
         spatial.oil.naphtha = ["EU naphtha for industry"]
         spatial.oil.HVC = ["EU HVC for industry"]
         spatial.oil.kerosene = ["EU kerosene"]
-        spatial.oil.aviation = ["EU kerosene for aviation"]
+        spatial.oil.aviation = ["EU aviation"]
         spatial.oil.shipping = ["EU shipping oil"]
         spatial.oil.agriculture_machinery = ["EU agriculture machinery oil"]
         spatial.oil.land_transport = ["EU land transport oil"]
@@ -3119,7 +3119,7 @@ def add_heat(
                     bus1=nodes,
                     bus2=nodes + " urban central heat",
                     bus3="co2 atmosphere",
-                    carrier="urban central CHP",
+                    carrier=f"urban central {fuel} CHP",
                     p_nom_extendable=True,
                     capital_cost=costs.at["central gas CHP", "fixed"]
                     * costs.at["central gas CHP", "efficiency"],
@@ -3139,7 +3139,7 @@ def add_heat(
                     bus2=nodes + " urban central heat",
                     bus3="co2 atmosphere",
                     bus4=spatial.co2.df.loc[nodes, "nodes"].values,
-                    carrier="urban central CHP CC",
+                    carrier=f"urban central {fuel} CHP CC",
                     p_nom_extendable=True,
                     capital_cost=costs.at["central gas CHP", "fixed"]
                     * costs.at["central gas CHP", "efficiency"]
@@ -5314,7 +5314,7 @@ def add_industry(
         "Bus",
         spatial.oil.aviation,
         location=spatial.oil.demand_locations,
-        carrier="kerosene for aviation",
+        carrier="aviation",
         unit="MWh_LHV",
     )
 
@@ -5322,7 +5322,7 @@ def add_industry(
         "Load",
         spatial.oil.aviation,
         bus=spatial.oil.aviation,
-        carrier="kerosene for aviation",
+        carrier="aviation",
         p_set=p_set,
     )
 

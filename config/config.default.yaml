@@ -662,7 +662,6 @@ sector:
   allam_cycle_gas: false
   hydrogen_fuel_cell: true
   hydrogen_turbine: false
-  hydrogen_chp: false
   SMR: true
   SMR_cc: true
   grey_methanol: false
@@ -1404,7 +1403,7 @@ plotting:
     oil-to-kerosene: '#91e6d6'
     kerosene: '#91e6d6'
     kerosene export: '#91e6d6'
-    kerosene for aviation: '#a1ffe6'
+    aviation: '#a1ffe6'
     naphtha for industry: '#57ebc4'
     HVC for industry: '#57ebc4'
     naphtha: '#57ebc4'
