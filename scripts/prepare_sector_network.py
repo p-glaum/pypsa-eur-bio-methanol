@@ -3169,6 +3169,29 @@ def add_heat(
                     lifetime=costs.at["central gas CHP", "lifetime"],
                 )
 
+        if options["hydrogen_chp"] and heat_system == HeatSystem.URBAN_CENTRAL:
+            logger.info("Adding hydrogen CHP. Assuming gas CHP technology costs.")
+
+            if options.get("H2_distribution_cost"):
+                marginal_cost = options["H2_distribution_cost"]
+
+            n.add(
+                "Link",
+                nodes + " urban central H2 CHP",
+                bus0=nodes + " H2",
+                bus1=nodes,
+                bus2=nodes + " urban central heat",
+                carrier="urban central H2 CHP",
+                p_nom_extendable=True,
+                capital_cost=costs.at["central gas CHP", "fixed"]
+                * costs.at["central gas CHP", "efficiency"],
+                marginal_cost=marginal_cost,
+                efficiency=costs.at["central gas CHP", "efficiency"],
+                efficiency2=costs.at["central gas CHP", "efficiency"]
+                / costs.at["central gas CHP", "c_b"],
+                lifetime=costs.at["central gas CHP", "lifetime"],
+            )
+
         if (
             options["chp"]["enable"]
             and options["chp"]["micro_chp"]

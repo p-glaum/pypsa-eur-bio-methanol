@@ -662,6 +662,7 @@ sector:
   allam_cycle_gas: false
   hydrogen_fuel_cell: true
   hydrogen_turbine: false
+  hydrogen_chp: false
   SMR: true
   SMR_cc: true
   grey_methanol: false
