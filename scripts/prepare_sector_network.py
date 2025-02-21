@@ -1546,7 +1546,7 @@ def add_ammonia(n, costs):
 
     p_nom = (
         industrial_demand["ammonia"].groupby(level="node").sum().div(nhours)
-        / costs.at["Haber-Bosch", "electricity-input"]
+        * costs.at["Haber-Bosch", "electricity-input"]
     )
 
     no_relocation = not options["relocation_ammonia"]
