@@ -6279,7 +6279,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="base",
+            run="imports/all_networks",
         )
 
     configure_logging(snakemake)
@@ -6477,6 +6477,11 @@ if __name__ == "__main__":
         n, snakemake.params.time_resolution, snakemake.input.snapshot_weightings
     )
 
+    if options["fuel_imports"]["enable"]:
+        add_green_fuel_imports(n, options)
+    if options["fuel_exports"]["enable"]:
+        add_fuel_exports(n, options)
+
     co2_budget = snakemake.params.co2_budget
     if isinstance(co2_budget, str) and co2_budget.startswith("cb"):
         fn = "results/" + snakemake.params.RDIR + "/csvs/carbon_budget_distribution.csv"
@@ -6555,11 +6560,6 @@ if __name__ == "__main__":
     )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-
-    if options["fuel_imports"]["enable"]:
-        add_green_fuel_imports(n, options)
-    if options["fuel_exports"]["enable"]:
-        add_fuel_exports(n, options)
 
     sanitize_carriers(n, snakemake.config)
     sanitize_locations(n)
