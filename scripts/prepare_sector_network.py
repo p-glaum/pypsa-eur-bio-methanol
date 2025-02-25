@@ -3729,12 +3729,8 @@ def add_biomass(
         )
 
     if options["methanol"]["biogas_to_methanol"]:
-        efficiency = (
-            1 / 0.78
-        )  # biogas and elec input from https://fortesmedia.com/files/files/Doc_Pack/h2p2x/Power_upgrade_of_Biogas_-_H2_and_P2X_Copenhagen_June_2022.pdf
-        efficiency2 = 0.76 * 1 / 0.78  # MW_elec/MW_MeOH * MW_MeOH/MW_biogas
-        # from fig.4.1 paper https://www.sciencedirect.com/science/article/pii/S0196890424001614?via%3Dihub#f0015
-        carbon_efficiency = 0.93
+        efficiency = costs.at["biogas-to-methanol", "methanol-output"]
+        efficiency2 = costs.at["biogas-to-methanol", "electricity-input"]
         capital_cost = costs.at["biogas", "fixed"]
         +efficiency * costs.at["methanolisation", "fixed"]
         +efficiency2 * costs.at[
@@ -3760,6 +3756,12 @@ def add_biomass(
             marginal_cost=marginal_cost,
         )
 
+        carbon_efficiency = costs.at["biogas-to-methanol", "carbon-efficiency"]
+        carbon_input = (
+            efficiency
+            / carbon_efficiency
+            * costs.at["methanolisation", "carbondioxide-input"]
+        )
         capital_cost_cc = (
             capital_cost
             + costs.at["cement capture", "fixed"]
@@ -3778,12 +3780,8 @@ def add_biomass(
             bus4=spatial.co2.nodes,
             efficiency=efficiency,
             efficiency2=-efficiency2,
-            efficiency3=-carbon_efficiency
-            * efficiency
-            * costs.at["methanolisation", "carbondioxide-input"],
-            efficiency4=(1 - carbon_efficiency)
-            * efficiency
-            * costs.at["methanolisation", "carbondioxide-input"],
+            efficiency3=-carbon_input,
+            efficiency4=(1 - carbon_efficiency) * carbon_input,
             carrier="biogas-to-methanol CC",
             capital_cost=capital_cost_cc,
             p_nom_extendable=True,
