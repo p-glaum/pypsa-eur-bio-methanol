@@ -724,6 +724,7 @@ sector:
   electricity_to_high_heat: false
   replace_medium_heat: false
   endogenous_medium_heat: false
+  min_part_load_high_heat: 0
   endogenous_steel: false
   relocation_steel: false
   HBI_import: false   # in €/t

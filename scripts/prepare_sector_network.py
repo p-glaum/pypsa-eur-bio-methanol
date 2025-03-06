@@ -164,13 +164,12 @@ def define_spatial(nodes, options):
     else:
         spatial.methanol.nodes = ["EU methanol"]
         spatial.methanol.locations = ["EU"]
+        spatial.methanol.shipping = "EU shipping methanol"
         if options["methanol"]["regional_methanol_demand"]:
             spatial.methanol.demand_locations = nodes
             spatial.methanol.industry = nodes + " industry methanol"
-            spatial.methanol.shipping = nodes + " shipping methanol"
         else:
             spatial.methanol.demand_locations = ["EU"]
-            spatial.methanol.shipping = ["EU shipping methanol"]
             spatial.methanol.industry = ["EU industry methanol"]
 
     spatial.methanol.df = pd.DataFrame(vars(spatial.methanol), index=nodes)
@@ -4688,6 +4687,7 @@ def add_industry(
             bus2="co2 atmosphere",
             carrier="gas for industry heat",
             p_nom_extendable=True,
+            p_min_pu=options["min_part_load_high_heat"],
             efficiency=1.0,
             efficiency2=costs.at["gas", "CO2 intensity"],
             capital_cost=costs.at["direct firing gas", "fixed"],
@@ -4708,6 +4708,7 @@ def add_industry(
             bus3=spatial.co2.nodes,
             carrier="gas for industry heat CC",
             p_nom_extendable=True,
+            p_min_pu=options["min_part_load_high_heat"],
             efficiency=0.9,
             efficiency2=costs.at["gas", "CO2 intensity"]
             * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4733,6 +4734,7 @@ def add_industry(
         bus2="co2 atmosphere",
         carrier="methanol for industry heat",
         p_nom_extendable=True,
+        p_min_pu=options["min_part_load_high_heat"],
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
         capital_cost=costs.at["direct firing gas", "fixed"],
@@ -4753,6 +4755,7 @@ def add_industry(
         bus3=spatial.co2.nodes,
         carrier="methanol for industry heat CC",
         p_nom_extendable=True,
+        p_min_pu=options["min_part_load_high_heat"],
         efficiency=0.9,
         efficiency2=costs.at["methanol", "CO2 intensity"]
         * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4778,6 +4781,7 @@ def add_industry(
             bus1=spatial.industry.highT,
             carrier="electricity for industry heat",
             p_nom_extendable=True,
+            p_min_pu=options["min_part_load_high_heat"],
             capital_cost=costs.at["direct firing electricity", "fixed"],
         )
 
@@ -4791,6 +4795,7 @@ def add_industry(
             bus1=spatial.industry.highT,
             carrier="H2 for industry heat",
             p_nom_extendable=True,
+            p_min_pu=options["min_part_load_high_heat"],
             efficiency=1.0,
             capital_cost=costs.at["direct firing gas", "fixed"],
             marginal_cost=(
@@ -4851,7 +4856,7 @@ def add_industry(
 
         n.add(
             "Link",
-            spatial.methanol.shipping,
+            spatial.methanol.nodes,
             bus0=spatial.methanol.nodes,
             bus1="EU shipping",
             bus2="co2 atmosphere",
@@ -5021,6 +5026,7 @@ def add_industry(
             efficiency=options["shipping_electricity_efficiency"]
             / options["shipping_oil_efficiency"],
             p_nom_max=domestic_navigation * 1e6 / nhours,
+            p_min_pu=1,
             p_nom_extendable=True,
         )
 
@@ -5362,6 +5368,7 @@ def add_industry(
             efficiency=options["aviation_electricity_efficiency"]
             / options["aviation_jet_fuel_efficiency"],
             p_nom_max=domestic_aviation * 1e6 / nhours,
+            p_min_pu=1,
             p_nom_extendable=True,
         )
 
@@ -6277,7 +6284,7 @@ if __name__ == "__main__":
             ll="v1.25",
             sector_opts="",
             planning_horizons="2050",
-            run="imports/all_networks",
+            run="co2_network/methanol_only",
         )
 
     configure_logging(snakemake)
