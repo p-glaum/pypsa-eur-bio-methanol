@@ -722,9 +722,11 @@ sector:
   relocation_ammonia: false
   electricity_to_medium_heat: false
   electricity_to_high_heat: false
+  min_part_load_high_heat: 1
+  exclude_sector_for_electricity_to_high_heat:
+  - Glass production
   replace_medium_heat: false
   endogenous_medium_heat: false
-  min_part_load_high_heat: 0
   endogenous_steel: false
   relocation_steel: false
   HBI_import: false   # in €/t

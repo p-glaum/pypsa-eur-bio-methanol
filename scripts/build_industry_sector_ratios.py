@@ -777,40 +777,65 @@ def nonmetalic_mineral_products():
 
     # Glass production
 
-    # This sector has process emissions.
-    # Includes four subcategories:
-    # (a) Melting tank
-    # (b) Forming
-    # (c) Annealing
-    # (d) Finishing processes.
-    # (a) represents 73%. (b), (d) are joined to (c).
-    # Everything is electrified.
+    # take assumptions from https://www.agora-industry.org/fileadmin/Projects/2023/2023-20_IND_Electrification_Industrial_Heat/A-IND_329_04_Electrification_Industrial_Heat_WEB.pdf where the fuel demand is reduced from 10.7 to 1.9 GJ/t glass and the electric demand is increased from 0.7 to 4.5 GJ/t glass
 
     sector = "Glass production"
 
     df[sector] = 0.0
 
+    sel = "Glass production"
     s_fec = idees["fec"][97:126]
     s_ued = idees["ued"][97:126]
     assert s_fec.index[0] == sector
     assert s_ued.index[0] == sector
 
-    sel = ["Lighting", "Air compressors", "Motor drives", "Fans and pumps"]
-    df.loc["elec", sector] += s_fec[sel].sum()
+    ## from report
+    # container glass
+    container_glass_demand = 20  # Mt glass
+    fuel_container_glass_today = 4.9  # GJ/t glass
+    elec_container_glass_today = 0.5  # GJ/t glass
+    efficiency_increase = 0.47  # efficiency increase with electrification
+    elec_container_glass_future = round(
+        (1 - efficiency_increase)
+        * (fuel_container_glass_today + elec_container_glass_today),
+        4,
+    )  # GJ/t glass
+    frac_elec_container_glass = round(
+        elec_container_glass_future
+        / (fuel_container_glass_today + elec_container_glass_today),
+        4,
+    )  # fraction of electricity in future demand
+    flat_glass_demand = 10  # Mt glass
+    fuel_flat_glass_today = 10.7  # GJ/t glass
+    elec_flat_glass_today = 0.7  # GJ/t glass
+    fuel_flat_glass_future = 1.9  # GJ/t glass
+    elec_flat_glass_future = 4.5  # GJ/t glass
+    # calculate the fraction of total electricity and fuel demand
+    frac_elec_flat_glass = round(
+        elec_flat_glass_future / (fuel_flat_glass_today + elec_flat_glass_today), 4
+    )  # fraction of electricity in future demand
+    frac_fuel_flat_glass = round(
+        fuel_flat_glass_future / (fuel_flat_glass_today + elec_flat_glass_today), 4
+    )  # fraction of fuel in future demand
+    # total flat glass and container glass elec and fuel fraction
+    total_frac_fuel = round(
+        (flat_glass_demand * frac_fuel_flat_glass)
+        / (flat_glass_demand + container_glass_demand),
+        4,
+    )
+    total_frac_elec = round(
+        (
+            flat_glass_demand * frac_elec_flat_glass
+            + container_glass_demand * frac_elec_container_glass
+        )
+        / (flat_glass_demand + container_glass_demand),
+        4,
+    )
+    # electricity demand
+    df.loc["elec", sector] += s_fec[sel] * total_frac_elec
 
-    df.loc["heat", sector] += s_fec["Low-enthalpy heat"]
-
-    # Efficiency changes due to electrification
-    key = "Glass: Electric melting tank"
-    eff_elec = s_ued[key] / s_fec[key]
-
-    df.loc["elec", sector] += s_ued["Glass: Melting tank"] / eff_elec
-
-    key = "Glass: Annealing - electric"
-    eff_elec = s_ued[key] / s_fec[key]
-
-    sel = ["Glass: Forming", "Glass: Annealing", "Glass: Finishing processes"]
-    df.loc["elec", sector] += s_ued[sel].sum() / eff_elec
+    # fuel demand
+    df.loc["methane", sector] += s_fec[sel] * total_frac_fuel
 
     s_emi = idees["emi"][97:127]
     assert s_emi.index[0] == sector

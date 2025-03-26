@@ -4687,7 +4687,6 @@ def add_industry(
             bus2="co2 atmosphere",
             carrier="gas for industry heat",
             p_nom_extendable=True,
-            p_min_pu=options["min_part_load_high_heat"],
             efficiency=1.0,
             efficiency2=costs.at["gas", "CO2 intensity"],
             capital_cost=costs.at["direct firing gas", "fixed"],
@@ -4708,7 +4707,6 @@ def add_industry(
             bus3=spatial.co2.nodes,
             carrier="gas for industry heat CC",
             p_nom_extendable=True,
-            p_min_pu=options["min_part_load_high_heat"],
             efficiency=0.9,
             efficiency2=costs.at["gas", "CO2 intensity"]
             * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4734,7 +4732,6 @@ def add_industry(
         bus2="co2 atmosphere",
         carrier="methanol for industry heat",
         p_nom_extendable=True,
-        p_min_pu=options["min_part_load_high_heat"],
         efficiency=1.0,
         efficiency2=costs.at["methanol", "CO2 intensity"],
         capital_cost=costs.at["direct firing gas", "fixed"],
@@ -4755,7 +4752,6 @@ def add_industry(
         bus3=spatial.co2.nodes,
         carrier="methanol for industry heat CC",
         p_nom_extendable=True,
-        p_min_pu=options["min_part_load_high_heat"],
         efficiency=0.9,
         efficiency2=costs.at["methanol", "CO2 intensity"]
         * (1 - costs.at["cement capture", "capture_rate"]),
@@ -4773,6 +4769,25 @@ def add_industry(
     )
 
     if options["electricity_to_high_heat"]:
+        exclude_sector = options["exclude_sector_for_electricity_to_high_heat"]
+        total_demand = high_heat_demand.copy()
+        total_demand.index = total_demand.index.str.replace(
+            " high heat for industry", ""
+        )
+        not_electrifiable = (
+            industrial_demand.loc[
+                industrial_demand.index.get_level_values("sector").isin(exclude_sector),
+                "methane",
+            ]
+            .groupby(level="node")
+            .sum()
+            / nhours
+        )
+        p_nom_max = total_demand - not_electrifiable
+        p_nom_max = p_nom_max.rename(
+            lambda x: x + " high heat for industry (electricity)"
+        )
+
         n.add(
             "Link",
             spatial.industry.highT,
@@ -4781,6 +4796,7 @@ def add_industry(
             bus1=spatial.industry.highT,
             carrier="electricity for industry heat",
             p_nom_extendable=True,
+            p_nom_max=p_nom_max,
             p_min_pu=options["min_part_load_high_heat"],
             capital_cost=costs.at["direct firing electricity", "fixed"],
         )
@@ -4795,7 +4811,6 @@ def add_industry(
             bus1=spatial.industry.highT,
             carrier="H2 for industry heat",
             p_nom_extendable=True,
-            p_min_pu=options["min_part_load_high_heat"],
             efficiency=1.0,
             capital_cost=costs.at["direct firing gas", "fixed"],
             marginal_cost=(
